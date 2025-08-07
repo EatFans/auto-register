@@ -1,6 +1,6 @@
 import tkinter as tk
 import threading
-from register import RegisterManager
+from register.register import RegisterManager
 
 class Application:
     def __init__(self,title,height,width):

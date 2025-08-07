@@ -1,9 +1,7 @@
 # 注册接口API封装
-from http.client import responses
-
 import requests
 
-def verifyEmailAddress(email):
+def verify_email_address(email):
     """
     验证邮箱地址接口
     :param email: 邮箱
@@ -25,7 +23,7 @@ def verifyEmailAddress(email):
 
 
 
-def activationEmail(email,k_token):
+def activation_email(email,k_token):
     """
     激活邮箱接口
     :param email: 邮箱
