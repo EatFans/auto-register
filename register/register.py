@@ -60,8 +60,8 @@ class RegisterManager:
             # TODO: 验证邮箱地址
             # TODO: 发送邮箱激活码请求
             # TODO: 通过邮箱获取邮件
-            # TODO：随机生成密码
-            password = '123456'
+            # 随机生成密码
+            password = generate_password()
             name = '小红'
             birthday = date(2000,1,1)
             country = 'China'
@@ -78,6 +78,6 @@ class RegisterManager:
             # TODO: 发送提交注册请求
 
             self.account_storage.add(account)
-            self.log(email_address, "red")
+            self.log(email_address, "green")
             i += 1
 

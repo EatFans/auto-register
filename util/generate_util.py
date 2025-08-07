@@ -22,9 +22,29 @@ def generate_email(domain='@163.com',length=10):
             used_email_address.add(email_address)
             return email_address
 
-# TODO
-def generate_password():
+def generate_password(length=12) -> str:
     """
     随机生成密码
-    :return: 返回生成好的密码
+    :param length: 密码长度，默认为12
+    :return: 返回生成好的密码字符串
     """
+    # 定义字符集
+    upper = string.ascii_uppercase
+    lower = string.ascii_lowercase
+    digits = string.digits
+    symbols = "!@#$%^&*()-_"
+
+    # 确保密码至少包含一种每类字符
+    base = [
+        random.choice(upper),
+        random.choice(lower),
+        random.choice(digits),
+        random.choice(symbols)
+    ]
+
+    # 补足剩余长度的随机字符串
+    all_chars = upper + lower + digits + symbols
+    base += random.choices(all_chars,k=length-len(base))
+    # 打乱顺序
+    random.shuffle(base)
+    return ''.join(base)
