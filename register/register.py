@@ -1,7 +1,7 @@
 from account import Account
 from api.register_api import *
 from util.generate_util import *
-from datetime import date
+from datetime import datetime
 from account_storage import AccountStorage
 from util.excel_util import *
 
@@ -27,30 +27,37 @@ class RegisterManager:
         else:
             print(message)
     
-    def register_accounts(self, count,  random_user, random_pwd,):
+    def register_accounts(self, count,name,birthday,country,gender,export_path):
         """
         注册账号
 
         """
         # 循环注册
-        self.register_loop(count)
+        self.register_loop(count,name,birthday,country,gender)
         #
         self.log("已经注册 "+str(self.account_storage.__len__()) + " 个账户")
 
+
         # 将注册成功的账号导出为excel文件
-        if export_accounts_to_excel(self.account_storage.accounts,"测试.xlsx"):
+        if export_accounts_to_excel(self.account_storage.accounts):
             self.log(" ")
             self.log("============================","green")
             self.log("成功保存并导出所有已经注册的账号!", color="green")
+            self.log("导出保存路径:" + export_path)
             self.log(" ")
+
         else:
             self.log(" ")
             self.log("============================","red")
             self.log("保存导出所有已经注册的账号失败！","red")
 
-    def register_loop(self,count):
+    def register_loop(self,count,name,birthday,country,gender):
         """
         循环注册并添加已经注册好的账号
+        :param gender:
+        :param name:
+        :param birthday:
+        :param country:
         :param count: 需要注册的数量
         """
         i = 0
@@ -62,16 +69,12 @@ class RegisterManager:
             # TODO: 通过邮箱获取邮件
             # 随机生成密码
             password = generate_password()
-            name = '小红'
-            birthday = date(2000,1,1)
-            country = 'China'
-            gender = 'f'
 
             account = Account(
                 email_address,
                 password,
                 name,
-                birthday,
+                datetime.strptime(birthday, "%Y-%m-%d").date(),
                 country,
                 gender
             )

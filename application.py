@@ -1,6 +1,7 @@
 import tkinter as tk
 import threading
 from register.register import RegisterManager
+import tkinter.filedialog as filedialog
 
 class Application:
     def __init__(self,title,height,width):
@@ -51,13 +52,42 @@ class Application:
         self.count_entry = tk.Entry(frame1, width=30)
         self.count_entry.pack(side=tk.LEFT, fill='x', expand=True)
 
-        # 复选框：随机账号 和 随机密码
+        # 名字
         frame2 = tk.Frame(self.window)
         frame2.pack(pady=5, fill='x', padx=10)
-        self.random_user_var = tk.BooleanVar()
-        self.random_pwd_var = tk.BooleanVar()
-        tk.Checkbutton(frame2, text="随机账号", variable=self.random_user_var).pack(side=tk.LEFT, padx=10)
-        tk.Checkbutton(frame2, text="随机密码", variable=self.random_pwd_var).pack(side=tk.LEFT, padx=10)
+        tk.Label(frame2, text="名字（默认随机)：",width=12, anchor='w').pack(side=tk.LEFT)
+        self.name_entry = tk.Entry(frame2, width=30)
+        self.name_entry.pack(side=tk.LEFT, fill='x', expand=True)
+
+        # 生日
+        frame3 = tk.Frame(self.window)
+        frame3.pack(pady=5, fill='x', padx=10)
+        tk.Label(frame3,text="生日: 2000-01-01",width=12, anchor='w').pack(side=tk.LEFT)
+        self.birthday_entry = tk.Entry(frame3, width=30)
+        self.birthday_entry.pack(side=tk.LEFT, fill='x', expand=True)
+
+        # 国家区域
+        frame4 = tk.Frame(self.window)
+        frame4.pack(pady=5, fill='x', padx=10)
+        tk.Label(frame4,text="国家（默认China）：",width=12, anchor='w').pack(side=tk.LEFT)
+        self.country_entry = tk.Entry(frame4, width=30)
+        self.country_entry.pack(side=tk.LEFT, fill='x', expand=True)
+
+        # 性别
+        frame5 = tk.Frame(self.window)
+        frame5.pack(pady=5, fill='x', padx=10)
+        tk.Label(frame5,text="性别（默认男）:",width=12, anchor='w').pack(side=tk.LEFT)
+        self.gender_entry = tk.Entry(frame5, width=30)
+        self.gender_entry.pack(side=tk.LEFT, fill='x', expand=True)
+
+        # 导出路径
+        frame6 = tk.Frame(self.window)
+        frame6.pack(pady=5, fill='x', padx=10)
+        tk.Label(frame6, text="导出保存路径：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.export_path_entry = tk.Entry(frame6, width=20)
+        self.export_path_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        browse_btn = tk.Button(frame6, text="浏览", command=self.browse_path)
+        browse_btn.pack(side=tk.LEFT, padx=5)
 
         # 按钮
         button_frame = tk.Frame(self.window)
@@ -72,12 +102,30 @@ class Application:
         self.log_text.bind("<Button-1>", lambda e: "break")  # 禁止鼠标左键点击
         print("初始化窗口UI成功")
 
+
+    def browse_path(self):
+        """
+        弹出文件保存对话框，选择保存的 Excel 文件路径
+        """
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel 文件", "*.xlsx")],
+            title="选择保存路径"
+        )
+        if file_path:
+            self.export_path_entry.delete(0, 'end')
+            self.export_path_entry.insert(0, file_path)
+
+
     # 开始注册
     def start_registration(self):
         # 获取输入参数
         count_str = self.count_entry.get().strip()
-        random_user = self.random_user_var.get()
-        random_pwd = self.random_pwd_var.get()
+        name = self.name_entry.get().strip()
+        birthday = self.birthday_entry.get().strip()
+        country = self.country_entry.get().strip()
+        gender = self.gender_entry.get().strip()
+        export_path = self.export_path_entry.get().strip()
 
         # 参数验证
         try:
@@ -88,20 +136,29 @@ class Application:
         except ValueError:
             self.print_log("注册数量必须是有效的整数", "red")
             return
+        if not birthday:
+            birthday = "2000-01-01"
+        if not country:
+            country = "China"
+        if not gender:
+            gender = "男"
+        if not export_path:
+            self.print_log("导出保存路径未设置！", "red")
+            return
 
         # 创建并启动注册线程
         self.print_log(f"开始注册 {count} 个账号...", "blue")
         threading.Thread(target=self._run_registration, args=(
-            count,  random_user, random_pwd,
+            count,  name, birthday, country,gender,export_path
         )).start()
 
     # 在单独的线程中运行注册过程
-    def _run_registration(self, count,  random_user, random_pwd,):
+    def _run_registration(self, count,name,birthday,country, gender,export_path):
         # 创建注册管理器实例
         register_manager = RegisterManager(log_callback=self.print_log)
         # 执行注册过程
         register_manager.register_accounts(
-            count,  random_user, random_pwd,
+            count,name,birthday,country,gender,export_path
         )
 
     # 启动
@@ -130,3 +187,5 @@ class Application:
         self.log_text.tag_add(color, start_index, end_index)
         self.log_text.see(tk.END)
         self.log_text.config(state=tk.DISABLED)
+
+
