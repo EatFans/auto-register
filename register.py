@@ -25,19 +25,12 @@ class RegisterManager:
         注册账号
 
         """
-        a = 0
-        while a < count:
-            a += 1
-            self.log(" ")
-            self.register_loop()
-            self.log("已经注册 " + str(a) + " 个账号","black")
-
-
+        res = verifyEmailAddress("2180654922@qq.com")
+        k = '7587d80f-4ea0-4f75-a9ab-89ae1f209adf'
+        # res = activationEmail("eatfan0921@163.com",k)
+        self.log("响应状态："+ str(res.status_code),"green")
+        self.log("响应体内容:" + res.text,"red")
+        print(res.text)
 
     def register_loop(self):
         verifyEmailAddress("test")
-        self.log("验证邮箱成功", "green")
-        activationEmail("test", "test-key")
-        self.log("激活邮箱成功", "green")
-        register("test")
-        self.log("用户注册成功", "green")
