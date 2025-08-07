@@ -2,6 +2,7 @@ import tkinter as tk
 import threading
 from register.register import RegisterManager
 import tkinter.filedialog as filedialog
+from util.string_util import *
 
 class Application:
     def __init__(self,title,height,width):
@@ -22,7 +23,6 @@ class Application:
     def init_window(self):
         """
         初始化窗口
-
         设置窗口标题、宽度、高度以及窗口位置
         """
         print("初始化窗口中...")
@@ -39,6 +39,7 @@ class Application:
         self.window.resizable(False, False)
         self.window.attributes('-topmost', True)
         print("窗口UI初始化成功")
+
 
     def setup_ui(self):
         """
@@ -124,8 +125,10 @@ class Application:
             self.export_path_entry.insert(0, file_path)
 
 
-    # 开始注册
     def start_registration(self):
+        """
+        开始注册
+        """
         # 获取输入参数
         domain = self.domain_entry.get().strip()
         count_str = self.count_entry.get().strip()
@@ -149,6 +152,10 @@ class Application:
             return
         if not birthday:
             birthday = "2000-01-01"
+        else:
+            if not validate_birthday(birthday):
+                self.print_log("生日格式错误！必须是 YYYY-MM-DD 格式！","red")
+                return
         if not country:
             country = "China"
         if not gender:
@@ -163,8 +170,17 @@ class Application:
            domain, count,  name, birthday, country,gender,export_path
         )).start()
 
-    # 在单独的线程中运行注册过程
     def _run_registration(self,domain ,count,name,birthday,country, gender,export_path):
+        """
+        在单独的线程中运行注册过程
+        :param domain: 邮箱域名
+        :param count: 注册数量
+        :param name: 名字
+        :param birthday: 生日
+        :param country: 国家
+        :param gender: 性别
+        :param export_path: 导出文件路径
+        """
         # 创建注册管理器实例
         register_manager = RegisterManager(log_callback=self.print_log)
         # 执行注册过程
@@ -172,7 +188,6 @@ class Application:
             domain,count,name,birthday,country,gender,export_path
         )
 
-    # 启动
     def run(self):
         self.window.mainloop()
 
@@ -186,6 +201,11 @@ class Application:
         self.window.after(0, self._update_log, msg, color)
 
     def _update_log(self, msg, color):
+        """
+        更新日志消息
+        :param msg: 日志消息
+        :param color: 字体颜色
+        """
         self.log_text.config(state=tk.NORMAL)
         # 插入前获取插入点
         start_index = self.log_text.index(tk.END + "-1c linestart")  # 当前插入行开始
