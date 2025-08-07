@@ -27,13 +27,13 @@ class RegisterManager:
         else:
             print(message)
     
-    def register_accounts(self, count,name,birthday,country,gender,export_path):
+    def register_accounts(self, domain,count,name,birthday,country,gender,export_path):
         """
         注册账号
 
         """
         # 循环注册
-        self.register_loop(count,name,birthday,country,gender)
+        self.register_loop(domain,count,name,birthday,country,gender)
         #
         self.log("已经注册 "+str(self.account_storage.__len__()) + " 个账户")
 
@@ -51,9 +51,10 @@ class RegisterManager:
             self.log("============================","red")
             self.log("保存导出所有已经注册的账号失败！","red")
 
-    def register_loop(self,count,name,birthday,country,gender):
+    def register_loop(self,domain,count,name,birthday,country,gender):
         """
         循环注册并添加已经注册好的账号
+        :param domain:
         :param gender:
         :param name:
         :param birthday:
@@ -63,7 +64,7 @@ class RegisterManager:
         i = 0
         while i < count:
             # 随机生成邮箱别名
-            email_address = generate_email("@test.com", 10)
+            email_address = generate_email(domain, 10)
             # TODO: 验证邮箱地址
             # TODO: 发送邮箱激活码请求
             # TODO: 通过邮箱获取邮件

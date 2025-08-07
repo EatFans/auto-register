@@ -45,6 +45,13 @@ class Application:
         初始化窗口组件UI
         """
         print("初始化窗口UI中...")
+        # 邮箱域名
+        frame7 = tk.Frame(self.window)
+        frame7.pack(pady=5, fill='x',padx=10)
+        tk.Label(frame7,text="邮箱域名：",width=12,anchor='w').pack(side=tk.LEFT)
+        self.domain_entry = tk.Entry(frame7,width=30)
+        self.domain_entry.pack(side=tk.LEFT,fill='x',expand=True)
+
         # 注册数量
         frame1 = tk.Frame(self.window)
         frame1.pack(pady=5, fill='x', padx=10)
@@ -120,6 +127,7 @@ class Application:
     # 开始注册
     def start_registration(self):
         # 获取输入参数
+        domain = self.domain_entry.get().strip()
         count_str = self.count_entry.get().strip()
         name = self.name_entry.get().strip()
         birthday = self.birthday_entry.get().strip()
@@ -128,6 +136,9 @@ class Application:
         export_path = self.export_path_entry.get().strip()
 
         # 参数验证
+        if not domain:
+            self.print_log("邮箱域名不能为空！","red")
+            return
         try:
             count = int(count_str)
             if count <= 0:
@@ -149,16 +160,16 @@ class Application:
         # 创建并启动注册线程
         self.print_log(f"开始注册 {count} 个账号...", "blue")
         threading.Thread(target=self._run_registration, args=(
-            count,  name, birthday, country,gender,export_path
+           domain, count,  name, birthday, country,gender,export_path
         )).start()
 
     # 在单独的线程中运行注册过程
-    def _run_registration(self, count,name,birthday,country, gender,export_path):
+    def _run_registration(self,domain ,count,name,birthday,country, gender,export_path):
         # 创建注册管理器实例
         register_manager = RegisterManager(log_callback=self.print_log)
         # 执行注册过程
         register_manager.register_accounts(
-            count,name,birthday,country,gender,export_path
+            domain,count,name,birthday,country,gender,export_path
         )
 
     # 启动
