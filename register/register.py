@@ -73,15 +73,17 @@ class RegisterManager:
             if self.check_email_address(email_address):
                 self.log("邮箱地址验证成功！","green")
                 flag = True
-            # TODO: 发送邮箱激活码请求
             # TODO: 通过邮箱获取邮件中的token来激活邮箱
+
             # 随机生成密码
             password = generate_password()
+
+            current_name = name if name else generate_name()
 
             account = Account(
                 email_address,
                 password,
-                name,
+                current_name,
                 datetime.strptime(birthday, "%Y-%m-%d").date(),
                 country,
                 gender
@@ -115,4 +117,5 @@ class RegisterManager:
         if result_code != "00":
             self.log("邮箱地址验证错误！","red")
             return False
+        print(response.text) # 测试用
         return True

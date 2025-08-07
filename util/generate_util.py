@@ -3,8 +3,12 @@
 import random
 import string
 import time
+from faker import Faker
+
+fake = Faker("en_US")
 
 used_email_address = set() # 已经使用过的邮箱地址合集
+
 
 
 def generate_email(domain='163.com',length=10):
@@ -48,3 +52,11 @@ def generate_password(length=12) -> str:
     # 打乱顺序
     random.shuffle(base)
     return ''.join(base)
+
+
+def generate_name() -> str:
+    """
+    随机生成简单英文名字
+    :return: 返回生成好的英文名
+    """
+    return fake.name()
