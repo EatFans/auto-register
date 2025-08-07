@@ -4,6 +4,7 @@ from util.generate_util import *
 from datetime import datetime
 from account_storage import AccountStorage
 from util.excel_util import *
+import json
 
 class RegisterManager:
     def __init__(self, log_callback=None):
@@ -63,11 +64,17 @@ class RegisterManager:
         """
         i = 0
         while i < count:
+            self.log(" ")
+            flag = False
             # 随机生成邮箱别名
             email_address = generate_email(domain, 10)
-            # TODO: 验证邮箱地址
+            self.log("已生成邮箱地址: " + email_address, "green")
+            # 验证邮箱地址
+            if self.check_email_address(email_address):
+                self.log("邮箱地址验证成功！","green")
+                flag = True
             # TODO: 发送邮箱激活码请求
-            # TODO: 通过邮箱获取邮件
+            # TODO: 通过邮箱获取邮件中的token来激活邮箱
             # 随机生成密码
             password = generate_password()
 
@@ -80,8 +87,32 @@ class RegisterManager:
                 gender
             )
             # TODO: 发送提交注册请求
-
-            self.account_storage.add(account)
-            self.log(email_address, "green")
+            if flag:
+                self.account_storage.add(account)
+                self.log("账号注册成功！","green")
+            else:
+                self.log("账号注册失败！","red")
             i += 1
 
+
+    def check_email_address(self, email_address):
+        """
+        检查邮箱地址
+        :param email_address:
+        :return: 如果调用邮箱地址成功就返回true，否则就返回false
+        """
+        response = verify_email_address(email_address)
+        if not response or response.status_code != 200:
+            self.log("邮箱地址验证错误！","red")
+            return False
+        # 检查响应体中resultCode
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            self.log("接口返回数据不是有效JSON格式！","red")
+            return False
+        result_code = data.get("ResultCode")
+        if result_code != "00":
+            self.log("邮箱地址验证错误！","red")
+            return False
+        return True
