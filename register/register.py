@@ -3,8 +3,7 @@ from api.register_api import *
 from util.generate_util import *
 from datetime import date
 from account_storage import AccountStorage
-from typing import List
-
+from util.excel_util import *
 
 class RegisterManager:
     def __init__(self, log_callback=None):
@@ -35,27 +34,33 @@ class RegisterManager:
         """
         # 循环注册
         self.register_loop(count)
-
         #
-        self.log("已经生成了 "+str(self.account_storage.__len__()) + " 个账户")
+        self.log("已经注册 "+str(self.account_storage.__len__()) + " 个账户")
 
-        for acc in self.account_storage.accounts:
-            self.log(acc.email)
-        # TODO: 随机生成邮箱别名
-        # TODO: 验证邮箱地址
-        # TODO: 发送邮箱激活码请求
-        # TODO: 通过邮箱获取邮件
-        # res = verify_email_address("2180654922@qq.com")
-        # k = '7587d80f-4ea0-4f75-a9ab-89ae1f209adf'
-        # res = activationEmail("eatfan0921@163.com",k)
-        # self.log("响应状态："+ str(res.status_code),"green")
-        # self.log("响应体内容:" + res.text,"red")
-        # print(res.text)
+        # 将注册成功的账号导出为excel文件
+        if export_accounts_to_excel(self.account_storage.accounts,"测试.xlsx"):
+            self.log(" ")
+            self.log("============================","green")
+            self.log("成功保存并导出所有已经注册的账号!", color="green")
+            self.log(" ")
+        else:
+            self.log(" ")
+            self.log("============================","red")
+            self.log("保存导出所有已经注册的账号失败！","red")
 
     def register_loop(self,count):
+        """
+        循环注册并添加已经注册好的账号
+        :param count: 需要注册的数量
+        """
         i = 0
         while i < count:
+            # 随机生成邮箱别名
             email_address = generate_email("@test.com", 10)
+            # TODO: 验证邮箱地址
+            # TODO: 发送邮箱激活码请求
+            # TODO: 通过邮箱获取邮件
+            # TODO：随机生成密码
             password = '123456'
             name = '小红'
             birthday = date(2000,1,1)
@@ -70,6 +75,8 @@ class RegisterManager:
                 country,
                 gender
             )
+            # TODO: 发送提交注册请求
+
             self.account_storage.add(account)
             self.log(email_address, "red")
             i += 1
