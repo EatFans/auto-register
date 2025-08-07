@@ -39,7 +39,7 @@ class RegisterManager:
 
 
         # 将注册成功的账号导出为excel文件
-        if export_accounts_to_excel(self.account_storage.accounts):
+        if export_accounts_to_excel(self.account_storage.accounts, export_path):
             self.log(" ")
             self.log("============================","green")
             self.log("成功保存并导出所有已经注册的账号!", color="green")

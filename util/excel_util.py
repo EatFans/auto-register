@@ -4,11 +4,11 @@ import os
 from account import Account
 from typing import List
 
-def export_accounts_to_excel(accounts: List[Account], filename: str = 'accounts.xlsx'):
+def export_accounts_to_excel(accounts: List[Account], filepath: str):
     """
     导出账号数据excel表格
     :param accounts: 账号数据
-    :param filename: 导出文件名字（默认：accounts.xlsx)
+    :param filepath: 导出文件路径
     :return: 如果导出保存成功就返回true，否则就返回false
     """
     try:
@@ -29,8 +29,7 @@ def export_accounts_to_excel(accounts: List[Account], filename: str = 'accounts.
                 account.country,
                 account.gender
             ])
-        # 保存文件到根目录
-        filepath = os.path.join(os.getcwd(), filename)
+        # 保存文件到指定路径
         wb.save(filepath)
         return True
     except Exception as e:
