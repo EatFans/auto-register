@@ -168,12 +168,12 @@ class Application:
         button_frame = tk.Frame(left_frame)
         button_frame.pack(pady=10)
         start_btn = tk.Button(button_frame, text="开始注册", width=15, height=2, 
-                             command=self.start_registration, bg="#4CAF50", fg="green",
+                             command=self.start_registration, bg="#4CAF50", fg="black",
                              font=('Arial', 10, 'bold'))
         start_btn.pack(side=tk.LEFT, padx=10)
         
         clear_btn = tk.Button(button_frame, text="清空日志", width=15, height=2, 
-                             command=self.clear_log, bg="#FF9800", fg="green",
+                             command=self.clear_log, bg="#FF9800", fg="black",
                              font=('Arial', 10, 'bold'))
         clear_btn.pack(side=tk.LEFT, padx=10)
         
