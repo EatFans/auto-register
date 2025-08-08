@@ -194,7 +194,7 @@ class Application:
         self.log_text.config(state=tk.DISABLED)
         
         # 右列：邮箱配置（预留）
-        email_config_frame = tk.LabelFrame(right_frame, text="邮箱配置（功能开发中）", font=('Arial', 10, 'bold'))
+        email_config_frame = tk.LabelFrame(right_frame, text="邮箱配置", font=('Arial', 10, 'bold'))
         email_config_frame.pack(fill='x', pady=(0, 10))
         
         # 预留空间提示
