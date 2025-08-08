@@ -41,6 +41,7 @@ class Application:
         self.window.geometry('%dx%d+%d+%d' % (self.width, self.height, cen_x, cen_y))
         # 设置窗口不可随便改动大小
         self.window.resizable(False, False)
+        # 临时置顶，确保窗口显示在前台
         self.window.attributes('-topmost', True)
         print("窗口UI初始化成功")
 
@@ -239,6 +240,8 @@ class Application:
         
         # 初始化界面状态
         self.on_mode_change()
+        # 取消置顶状态
+        self.window.attributes('-topmost', False)
         print("初始化窗口UI成功")
 
 
