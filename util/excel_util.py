@@ -21,11 +21,17 @@ def export_accounts_to_excel(accounts: List[Account], filepath: str):
         ws.append(headers)
         # 写入每一行数据
         for account in accounts:
+            # 处理生日字段，支持字符串和datetime对象
+            if isinstance(account.birthday, str):
+                birthday_str = account.birthday
+            else:
+                birthday_str = account.birthday.strftime('%Y-%m-%d')
+            
             ws.append([
                 account.email,
                 account.password,
                 account.name,
-                account.birthday.strftime('%Y-%m-%d'),
+                birthday_str,
                 account.country,
                 account.gender
             ])

@@ -5,6 +5,9 @@ from datetime import datetime
 from account_storage import AccountStorage
 from util.excel_util import *
 import json
+import threading
+import queue
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class RegisterManager:
     def __init__(self, log_callback=None):
@@ -28,7 +31,7 @@ class RegisterManager:
         else:
             print(message)
     
-    def register_accounts_random(self, domain, count, name, birthday, country, gender, export_path):
+    def register_accounts_random(self, domain, count, name, birthday, country, gender, export_path, thread_count=5):
         """
         随机生成模式注册账号
         :param domain: 邮箱域名
@@ -38,31 +41,144 @@ class RegisterManager:
         :param country: 国家
         :param gender: 性别
         :param export_path: 导出路径
+        :param thread_count: 线程数
         """
         # 清空之前的账号存储
         self.account_storage.clear()
         
-        # 循环注册
-        self.register_loop_random(domain, count, name, birthday, country, gender)
+        # 多线程注册
+        self._register_with_threads_random(domain, count, name, birthday, country, gender, thread_count)
         
         # 导出结果
         self._export_results(export_path)
     
-    def register_accounts_import(self, domain, user_data, export_path):
+    def register_accounts_import(self, domain, user_data, export_path, thread_count=5):
         """
         导入数据模式注册账号
         :param domain: 邮箱域名
         :param user_data: 导入的用户数据列表
         :param export_path: 导出路径
+        :param thread_count: 线程数
         """
         # 清空之前的账号存储
         self.account_storage.clear()
         
-        # 循环注册
-        self.register_loop_import(domain, user_data)
+        # 多线程注册
+        self._register_with_threads_import(domain, user_data, thread_count)
         
         # 导出结果
         self._export_results(export_path)
+    
+    def _register_with_threads_random(self, domain, count, name, birthday, country, gender, thread_count):
+        """
+        使用多线程进行随机生成模式注册
+        """
+        self.log(f"开始使用 {thread_count} 个线程进行注册...")
+        
+        # 创建线程锁，保护共享资源
+        self.lock = threading.Lock()
+        self.registered_count = 0
+        
+        # 使用线程池执行注册任务
+        with ThreadPoolExecutor(max_workers=thread_count) as executor:
+            # 提交注册任务
+            futures = []
+            for i in range(count):
+                future = executor.submit(self._register_single_random, domain, name, birthday, country, gender, i+1, count)
+                futures.append(future)
+            
+            # 等待所有任务完成
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    self.log(f"注册任务执行出错: {str(e)}", "red")
+    
+    def _register_with_threads_import(self, domain, user_data, thread_count):
+        """
+        使用多线程进行导入数据模式注册
+        """
+        self.log(f"开始使用 {thread_count} 个线程进行注册...")
+        
+        # 创建线程锁，保护共享资源
+        self.lock = threading.Lock()
+        self.registered_count = 0
+        
+        # 使用线程池执行注册任务
+        with ThreadPoolExecutor(max_workers=thread_count) as executor:
+            # 提交注册任务
+            futures = []
+            for i, user in enumerate(user_data):
+                future = executor.submit(self._register_single_import, domain, user, i+1, len(user_data))
+                futures.append(future)
+            
+            # 等待所有任务完成
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    self.log(f"注册任务执行出错: {str(e)}", "red")
+    
+    def _register_single_random(self, domain, name, birthday, country, gender, current_index, total_count):
+        """
+        单个随机生成模式注册任务
+        """
+        try:
+            # 生成邮箱和密码
+            email = generate_email(domain)
+            password = generate_password()
+            
+            # 使用提供的信息或生成随机信息
+            actual_name = name if name else generate_name()
+            
+            # 验证邮箱
+            if self.check_email_address(email):
+                # 创建账号对象
+                account = Account(email, password, actual_name, birthday, country, gender)
+                
+                # 线程安全地添加到存储
+                with self.lock:
+                    self.account_storage.add_account(account)
+                    self.registered_count += 1
+                    self.log(f"[{self.registered_count}/{total_count}] 注册成功: {email}", "green")
+            else:
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email}", "red")
+        except Exception as e:
+            with self.lock:
+                self.log(f"[{current_index}/{total_count}] 注册出错: {str(e)}", "red")
+    
+    def _register_single_import(self, domain, user_data, current_index, total_count):
+        """
+        单个导入数据模式注册任务
+        """
+        try:
+            # 生成邮箱和密码
+            email = generate_email(domain)
+            password = generate_password()
+            
+            # 使用导入的用户数据
+            name = user_data['name']
+            birthday = user_data['birthday']
+            country = user_data['country']
+            gender = user_data['gender']
+            
+            # 验证邮箱
+            if self.check_email_address(email):
+                # 创建账号对象
+                account = Account(email, password, name, birthday, country, gender)
+                
+                # 线程安全地添加到存储
+                with self.lock:
+                    self.account_storage.add_account(account)
+                    self.registered_count += 1
+                    self.log(f"[{self.registered_count}/{total_count}] 注册成功: {email} ({name})", "green")
+            else:
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email} ({name})", "red")
+        except Exception as e:
+            with self.lock:
+                self.log(f"[{current_index}/{total_count}] 注册出错: {str(e)}", "red")
     
     def _export_results(self, export_path):
         """

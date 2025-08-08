@@ -87,6 +87,14 @@ class Application:
         self.count_entry.pack(side=tk.LEFT, fill='x', expand=True)
         self.count_entry.insert(0, "1")  # 默认值
         
+        # 线程数配置
+        thread_frame = tk.Frame(basic_frame)
+        thread_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(thread_frame, text="线程数：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.thread_count_entry = tk.Entry(thread_frame, width=30)
+        self.thread_count_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        self.thread_count_entry.insert(0, "5")  # 默认5个线程
+        
         # 导出路径
         export_frame = tk.Frame(basic_frame)
         export_frame.pack(fill='x', padx=10, pady=3)
@@ -152,12 +160,12 @@ class Application:
         button_frame = tk.Frame(main_frame)
         button_frame.pack(pady=10)
         start_btn = tk.Button(button_frame, text="开始注册", width=15, height=2, 
-                             command=self.start_registration, bg="#4CAF50", fg="white", 
+                             command=self.start_registration, bg="#4CAF50", fg="green",
                              font=('Arial', 10, 'bold'))
         start_btn.pack(side=tk.LEFT, padx=10)
         
         clear_btn = tk.Button(button_frame, text="清空日志", width=15, height=2, 
-                             command=self.clear_log, bg="#FF9800", fg="white", 
+                             command=self.clear_log, bg="#FF9800", fg="green",
                              font=('Arial', 10, 'bold'))
         clear_btn.pack(side=tk.LEFT, padx=10)
         
@@ -259,6 +267,7 @@ class Application:
         # 获取基础参数
         domain = self.domain_entry.get().strip()
         count_str = self.count_entry.get().strip()
+        thread_count_str = self.thread_count_entry.get().strip()
         export_path = self.export_path_entry.get().strip()
         mode = self.registration_mode.get()
 
@@ -273,6 +282,17 @@ class Application:
                 return
         except ValueError:
             self.print_log("注册数量必须是有效的整数", "red")
+            return
+        try:
+            thread_count = int(thread_count_str)
+            if thread_count <= 0:
+                self.print_log("线程数必须大于0", "red")
+                return
+            if thread_count > 20:
+                self.print_log("线程数不建议超过20，以免对服务器造成过大压力", "red")
+                return
+        except ValueError:
+            self.print_log("线程数必须是有效的整数", "red")
             return
         if not export_path:
             self.print_log("导出保存路径未设置！", "red")
@@ -298,9 +318,9 @@ class Application:
             if not gender:
                 gender = "男"
             
-            self.print_log(f"开始随机生成模式注册 {count} 个账号...", "blue")
+            self.print_log(f"开始随机生成模式注册 {count} 个账号，使用 {thread_count} 个线程...", "blue")
             threading.Thread(target=self._run_random_registration, args=(
-               domain, count, name, birthday, country, gender, export_path
+               domain, count, name, birthday, country, gender, export_path, thread_count
             )).start()
             
         else:
@@ -314,12 +334,12 @@ class Application:
                 self.print_log(f"注册数量({count})超过导入的用户数据数量({imported_count})！", "red")
                 return
             
-            self.print_log(f"开始导入数据模式注册 {count} 个账号...", "blue")
+            self.print_log(f"开始导入数据模式注册 {count} 个账号，使用 {thread_count} 个线程...", "blue")
             threading.Thread(target=self._run_import_registration, args=(
-               domain, count, export_path
+               domain, count, export_path, thread_count
             )).start()
 
-    def _run_random_registration(self, domain, count, name, birthday, country, gender, export_path):
+    def _run_random_registration(self, domain, count, name, birthday, country, gender, export_path, thread_count):
         """
         在单独的线程中运行随机生成模式的注册过程
         :param domain: 邮箱域名
@@ -329,20 +349,22 @@ class Application:
         :param country: 国家
         :param gender: 性别
         :param export_path: 导出文件路径
+        :param thread_count: 线程数
         """
         # 创建注册管理器实例
         register_manager = RegisterManager(log_callback=self.print_log)
         # 执行随机生成注册过程
         register_manager.register_accounts_random(
-            domain, count, name, birthday, country, gender, export_path
+            domain, count, name, birthday, country, gender, export_path, thread_count
         )
     
-    def _run_import_registration(self, domain, count, export_path):
+    def _run_import_registration(self, domain, count, export_path, thread_count):
         """
         在单独的线程中运行导入数据模式的注册过程
         :param domain: 邮箱域名
         :param count: 注册数量
         :param export_path: 导出文件路径
+        :param thread_count: 线程数
         """
         # 创建注册管理器实例
         register_manager = RegisterManager(log_callback=self.print_log)
@@ -350,7 +372,7 @@ class Application:
         user_data = self.user_importer.get_user_data()[:count]
         # 执行导入数据注册过程
         register_manager.register_accounts_import(
-            domain, user_data, export_path
+            domain, user_data, export_path, thread_count
         )
 
     def run(self):
