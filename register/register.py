@@ -10,13 +10,15 @@ import queue
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class RegisterManager:
-    def __init__(self, log_callback=None):
+    def __init__(self, log_callback=None, app_instance=None):
         """
         初始化注册管理器
         
         :param log_callback: 日志回调函数，接收消息和颜色两个参数
+        :param app_instance: Application实例，用于更新表格
         """
         self.log_callback = log_callback
+        self.app_instance = app_instance
         self.email_handler = None
         self.account_storage = AccountStorage()
 
@@ -141,12 +143,24 @@ class RegisterManager:
                     self.account_storage.add_account(account)
                     self.registered_count += 1
                     self.log(f"[{self.registered_count}/{total_count}] 注册成功: {email}", "green")
+                    
+                    # 更新表格
+                    if self.app_instance:
+                        self.app_instance.add_account_to_table(email, password, actual_name, birthday, True, "随机")
             else:
                 with self.lock:
                     self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email}", "red")
+                    
+                    # 更新表格（失败状态）
+                    if self.app_instance:
+                        self.app_instance.add_account_to_table(email, password, actual_name, birthday, False, "随机")
         except Exception as e:
             with self.lock:
                 self.log(f"[{current_index}/{total_count}] 注册出错: {str(e)}", "red")
+                
+                # 更新表格（错误状态）
+                if self.app_instance:
+                    self.app_instance.add_account_to_table("错误", "错误", name, birthday, False, "导入")
     
     def _register_single_import(self, domain, user_data, current_index, total_count):
         """
@@ -173,9 +187,17 @@ class RegisterManager:
                     self.account_storage.add_account(account)
                     self.registered_count += 1
                     self.log(f"[{self.registered_count}/{total_count}] 注册成功: {email} ({name})", "green")
+                    
+                    # 更新表格
+                    if self.app_instance:
+                        self.app_instance.add_account_to_table(email, password, name, birthday, True, "导入")
             else:
                 with self.lock:
                     self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email} ({name})", "red")
+                    
+                    # 更新表格（失败状态）
+                    if self.app_instance:
+                        self.app_instance.add_account_to_table(email, password, name, birthday, False, "导入")
         except Exception as e:
             with self.lock:
                 self.log(f"[{current_index}/{total_count}] 注册出错: {str(e)}", "red")
