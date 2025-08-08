@@ -1,23 +1,33 @@
 # 账号状态存储
 from typing import List
 from account import Account
+import threading
 
 class AccountStorage:
     def __init__(self):
         self.accounts: List[Account] = [] # 初始化账号缓存列表
+        self.lock = threading.Lock()  # 线程锁
 
     # 添加账号
     def add(self, account: Account):
-        self.accounts.append(account)
+        with self.lock:
+            self.accounts.append(account)
+    
+    # 添加账号（别名方法，保持兼容性）
+    def add_account(self, account: Account):
+        self.add(account)
 
     # 获取完整列表
     def get_all(self) -> List[Account]:
-        return self.accounts
+        with self.lock:
+            return self.accounts.copy()  # 返回副本以避免并发修改
 
     # 清理
     def clear(self):
-        self.accounts.clear()
+        with self.lock:
+            self.accounts.clear()
 
     # 长度
     def __len__(self):
-        return len(self.accounts)
+        with self.lock:
+            return len(self.accounts)
