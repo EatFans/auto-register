@@ -198,7 +198,7 @@ class Application:
         email_config_frame.pack(fill='x', pady=(0, 10))
         
         # 预留空间提示
-        tk.Label(email_config_frame, text="此功能正在开发中，敬请期待...", fg="gray").pack(pady=20)
+        tk.Label(email_config_frame, text="（未完成）", fg="gray").pack(pady=20)
         
         # 右列：账号注册情况表格
         table_frame = tk.LabelFrame(right_frame, text="账号注册情况", font=('Arial', 10, 'bold'))
