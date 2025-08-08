@@ -3,6 +3,8 @@ import threading
 from register.register import RegisterManager
 import tkinter.filedialog as filedialog
 from util.string_util import *
+from util.import_util import UserDataImporter
+from tkinter import ttk, messagebox
 
 class Application:
     def __init__(self,title,height,width):
@@ -17,6 +19,8 @@ class Application:
         self.title = title
         self.width = width
         self.height = height
+        self.user_importer = UserDataImporter()  # 用户数据导入器
+        self.registration_mode = tk.StringVar(value="random")  # 注册模式：random或import
         self.init_window()
         self.setup_ui()
 
@@ -46,72 +50,154 @@ class Application:
         初始化窗口组件UI
         """
         print("初始化窗口UI中...")
+        
+        # 创建主框架
+        main_frame = tk.Frame(self.window)
+        main_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        
+        # 注册模式选择
+        mode_frame = tk.LabelFrame(main_frame, text="注册模式", font=('Arial', 10, 'bold'))
+        mode_frame.pack(fill='x', pady=(0, 10))
+        
+        mode_inner = tk.Frame(mode_frame)
+        mode_inner.pack(fill='x', padx=10, pady=5)
+        
+        tk.Radiobutton(mode_inner, text="随机生成模式", variable=self.registration_mode, 
+                      value="random", command=self.on_mode_change).pack(side=tk.LEFT, padx=10)
+        tk.Radiobutton(mode_inner, text="导入数据模式", variable=self.registration_mode, 
+                      value="import", command=self.on_mode_change).pack(side=tk.LEFT, padx=10)
+        
+        # 基础配置框架
+        basic_frame = tk.LabelFrame(main_frame, text="基础配置", font=('Arial', 10, 'bold'))
+        basic_frame.pack(fill='x', pady=(0, 10))
+        
         # 邮箱域名
-        frame7 = tk.Frame(self.window)
-        frame7.pack(pady=5, fill='x',padx=10)
-        tk.Label(frame7,text="邮箱域名：",width=12,anchor='w').pack(side=tk.LEFT)
-        self.domain_entry = tk.Entry(frame7,width=30)
-        self.domain_entry.pack(side=tk.LEFT,fill='x',expand=True)
-
+        domain_frame = tk.Frame(basic_frame)
+        domain_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(domain_frame, text="邮箱域名：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.domain_entry = tk.Entry(domain_frame, width=30)
+        self.domain_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        self.domain_entry.insert(0, "gmail.com")  # 默认值
+        
         # 注册数量
-        frame1 = tk.Frame(self.window)
-        frame1.pack(pady=5, fill='x', padx=10)
-        tk.Label(frame1, text="注册数量：", width=12, anchor='w').pack(side=tk.LEFT)
-        self.count_entry = tk.Entry(frame1, width=30)
+        count_frame = tk.Frame(basic_frame)
+        count_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(count_frame, text="注册数量：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.count_entry = tk.Entry(count_frame, width=30)
         self.count_entry.pack(side=tk.LEFT, fill='x', expand=True)
-
-        # 名字
-        frame2 = tk.Frame(self.window)
-        frame2.pack(pady=5, fill='x', padx=10)
-        tk.Label(frame2, text="名字（默认随机)：",width=12, anchor='w').pack(side=tk.LEFT)
-        self.name_entry = tk.Entry(frame2, width=30)
-        self.name_entry.pack(side=tk.LEFT, fill='x', expand=True)
-
-        # 生日
-        frame3 = tk.Frame(self.window)
-        frame3.pack(pady=5, fill='x', padx=10)
-        tk.Label(frame3,text="生日: 2000-01-01",width=12, anchor='w').pack(side=tk.LEFT)
-        self.birthday_entry = tk.Entry(frame3, width=30)
-        self.birthday_entry.pack(side=tk.LEFT, fill='x', expand=True)
-
-        # 国家区域
-        frame4 = tk.Frame(self.window)
-        frame4.pack(pady=5, fill='x', padx=10)
-        tk.Label(frame4,text="国家（默认China）：",width=12, anchor='w').pack(side=tk.LEFT)
-        self.country_entry = tk.Entry(frame4, width=30)
-        self.country_entry.pack(side=tk.LEFT, fill='x', expand=True)
-
-        # 性别
-        frame5 = tk.Frame(self.window)
-        frame5.pack(pady=5, fill='x', padx=10)
-        tk.Label(frame5,text="性别（默认男）:",width=12, anchor='w').pack(side=tk.LEFT)
-        self.gender_entry = tk.Entry(frame5, width=30)
-        self.gender_entry.pack(side=tk.LEFT, fill='x', expand=True)
-
+        self.count_entry.insert(0, "1")  # 默认值
+        
         # 导出路径
-        frame6 = tk.Frame(self.window)
-        frame6.pack(pady=5, fill='x', padx=10)
-        tk.Label(frame6, text="导出保存路径：", width=12, anchor='w').pack(side=tk.LEFT)
-        self.export_path_entry = tk.Entry(frame6, width=20)
+        export_frame = tk.Frame(basic_frame)
+        export_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(export_frame, text="导出路径：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.export_path_entry = tk.Entry(export_frame, width=20)
         self.export_path_entry.pack(side=tk.LEFT, fill='x', expand=True)
-        browse_btn = tk.Button(frame6, text="浏览", command=self.browse_path)
+        browse_btn = tk.Button(export_frame, text="浏览", command=self.browse_export_path)
         browse_btn.pack(side=tk.LEFT, padx=5)
-
-        # 按钮
-        button_frame = tk.Frame(self.window)
-        button_frame.pack(pady=15)
-        start_btn = tk.Button(button_frame, text="开始自动注册", width=12, command=self.start_registration)
+        
+        # 随机生成模式配置框架
+        self.random_frame = tk.LabelFrame(main_frame, text="随机生成配置", font=('Arial', 10, 'bold'))
+        self.random_frame.pack(fill='x', pady=(0, 10))
+        
+        # 名字
+        name_frame = tk.Frame(self.random_frame)
+        name_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(name_frame, text="名字（空=随机）：", width=15, anchor='w').pack(side=tk.LEFT)
+        self.name_entry = tk.Entry(name_frame, width=30)
+        self.name_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        
+        # 生日
+        birthday_frame = tk.Frame(self.random_frame)
+        birthday_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(birthday_frame, text="生日（YYYY-MM-DD）：", width=15, anchor='w').pack(side=tk.LEFT)
+        self.birthday_entry = tk.Entry(birthday_frame, width=30)
+        self.birthday_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        self.birthday_entry.insert(0, "2000-01-01")
+        
+        # 国家
+        country_frame = tk.Frame(self.random_frame)
+        country_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(country_frame, text="国家（空=China）：", width=15, anchor='w').pack(side=tk.LEFT)
+        self.country_entry = tk.Entry(country_frame, width=30)
+        self.country_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        
+        # 性别
+        gender_frame = tk.Frame(self.random_frame)
+        gender_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(gender_frame, text="性别（空=男）：", width=15, anchor='w').pack(side=tk.LEFT)
+        self.gender_entry = tk.Entry(gender_frame, width=30)
+        self.gender_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        
+        # 导入数据模式配置框架
+        self.import_frame = tk.LabelFrame(main_frame, text="导入数据配置", font=('Arial', 10, 'bold'))
+        self.import_frame.pack(fill='x', pady=(0, 10))
+        
+        # 导入文件选择
+        import_file_frame = tk.Frame(self.import_frame)
+        import_file_frame.pack(fill='x', padx=10, pady=5)
+        tk.Label(import_file_frame, text="Excel文件：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.import_file_entry = tk.Entry(import_file_frame, width=20)
+        self.import_file_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        import_btn = tk.Button(import_file_frame, text="选择文件", command=self.browse_import_file)
+        import_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 导入状态显示
+        import_status_frame = tk.Frame(self.import_frame)
+        import_status_frame.pack(fill='x', padx=10, pady=3)
+        self.import_status_label = tk.Label(import_status_frame, text="未导入数据", fg="gray")
+        self.import_status_label.pack(side=tk.LEFT)
+        
+        # 按钮框架
+        button_frame = tk.Frame(main_frame)
+        button_frame.pack(pady=10)
+        start_btn = tk.Button(button_frame, text="开始注册", width=15, height=2, 
+                             command=self.start_registration, bg="#4CAF50", fg="white", 
+                             font=('Arial', 10, 'bold'))
         start_btn.pack(side=tk.LEFT, padx=10)
-
-        # 日志窗口
-        self.log_text = tk.Text(self.window, height=20)
-        self.log_text.pack(pady=10)
+        
+        clear_btn = tk.Button(button_frame, text="清空日志", width=15, height=2, 
+                             command=self.clear_log, bg="#FF9800", fg="white", 
+                             font=('Arial', 10, 'bold'))
+        clear_btn.pack(side=tk.LEFT, padx=10)
+        
+        # 日志框架
+        log_frame = tk.LabelFrame(main_frame, text="运行日志", font=('Arial', 10, 'bold'))
+        log_frame.pack(fill='both', expand=True, pady=(0, 5))
+        
+        # 日志文本框和滚动条
+        log_container = tk.Frame(log_frame)
+        log_container.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        self.log_text = tk.Text(log_container, height=15, wrap=tk.WORD)
+        scrollbar = tk.Scrollbar(log_container, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=scrollbar.set)
+        
+        self.log_text.pack(side=tk.LEFT, fill='both', expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill='y')
+        
         self.log_text.config(state=tk.DISABLED)
-        self.log_text.bind("<Button-1>", lambda e: "break")  # 禁止鼠标左键点击
+        
+        # 初始化界面状态
+        self.on_mode_change()
         print("初始化窗口UI成功")
 
 
-    def browse_path(self):
+    def on_mode_change(self):
+        """
+        注册模式切换事件处理
+        """
+        mode = self.registration_mode.get()
+        if mode == "random":
+            # 显示随机生成配置，隐藏导入配置
+            self.random_frame.pack(fill='x', pady=(0, 10))
+            self.import_frame.pack_forget()
+        else:
+            # 显示导入配置，隐藏随机生成配置
+            self.import_frame.pack(fill='x', pady=(0, 10))
+            self.random_frame.pack_forget()
+    
+    def browse_export_path(self):
         """
         弹出文件保存对话框，选择保存的 Excel 文件路径
         """
@@ -123,22 +209,60 @@ class Application:
         if file_path:
             self.export_path_entry.delete(0, 'end')
             self.export_path_entry.insert(0, file_path)
+    
+    def browse_import_file(self):
+        """
+        选择要导入的Excel文件
+        """
+        file_path = filedialog.askopenfilename(
+            filetypes=[("Excel 文件", "*.xlsx"), ("Excel 文件", "*.xls")],
+            title="选择要导入的Excel文件"
+        )
+        if file_path:
+            self.import_file_entry.delete(0, 'end')
+            self.import_file_entry.insert(0, file_path)
+            # 尝试导入数据
+            self.import_user_data(file_path)
+    
+    def import_user_data(self, file_path):
+        """
+        导入用户数据
+        """
+        try:
+            if self.user_importer.import_from_excel(file_path):
+                count = self.user_importer.get_user_count()
+                self.import_status_label.config(text=f"已导入 {count} 条用户数据", fg="green")
+                # 自动设置注册数量
+                self.count_entry.delete(0, 'end')
+                self.count_entry.insert(0, str(count))
+                self.print_log(f"成功导入 {count} 条用户数据", "green")
+            else:
+                self.import_status_label.config(text="导入失败", fg="red")
+                messagebox.showerror("导入失败", "无法导入Excel文件，请检查文件格式")
+        except Exception as e:
+            self.import_status_label.config(text="导入失败", fg="red")
+            messagebox.showerror("导入失败", f"导入过程中出现错误：{str(e)}")
+    
+    def clear_log(self):
+        """
+        清空日志
+        """
+        self.log_text.config(state=tk.NORMAL)
+        self.log_text.delete(1.0, tk.END)
+        self.log_text.config(state=tk.DISABLED)
 
 
     def start_registration(self):
         """
         开始注册
         """
-        # 获取输入参数
+        # 获取基础参数
         domain = self.domain_entry.get().strip()
         count_str = self.count_entry.get().strip()
-        name = self.name_entry.get().strip()
-        birthday = self.birthday_entry.get().strip()
-        country = self.country_entry.get().strip()
-        gender = self.gender_entry.get().strip()
         export_path = self.export_path_entry.get().strip()
+        mode = self.registration_mode.get()
 
-        # 参数验证
+        # 基础参数验证
         if not domain:
             self.print_log("邮箱域名不能为空！","red")
             return
@@ -150,29 +274,54 @@ class Application:
         except ValueError:
             self.print_log("注册数量必须是有效的整数", "red")
             return
-        if not birthday:
-            birthday = "2000-01-01"
-        else:
-            if not validate_birthday(birthday):
-                self.print_log("生日格式错误！必须是 YYYY-MM-DD 格式！","red")
-                return
-        if not country:
-            country = "China"
-        if not gender:
-            gender = "男"
         if not export_path:
             self.print_log("导出保存路径未设置！", "red")
             return
 
-        # 创建并启动注册线程
-        self.print_log(f"开始注册 {count} 个账号...", "blue")
-        threading.Thread(target=self._run_registration, args=(
-           domain, count,  name, birthday, country,gender,export_path
-        )).start()
+        # 根据模式进行不同的处理
+        if mode == "random":
+            # 随机生成模式
+            name = self.name_entry.get().strip()
+            birthday = self.birthday_entry.get().strip()
+            country = self.country_entry.get().strip()
+            gender = self.gender_entry.get().strip()
+            
+            # 设置默认值
+            if not birthday:
+                birthday = "2000-01-01"
+            else:
+                if not validate_birthday(birthday):
+                    self.print_log("生日格式错误！必须是 YYYY-MM-DD 格式！","red")
+                    return
+            if not country:
+                country = "China"
+            if not gender:
+                gender = "男"
+            
+            self.print_log(f"开始随机生成模式注册 {count} 个账号...", "blue")
+            threading.Thread(target=self._run_random_registration, args=(
+               domain, count, name, birthday, country, gender, export_path
+            )).start()
+            
+        else:
+            # 导入数据模式
+            if self.user_importer.get_user_count() == 0:
+                self.print_log("请先导入用户数据！", "red")
+                return
+            
+            imported_count = self.user_importer.get_user_count()
+            if count > imported_count:
+                self.print_log(f"注册数量({count})超过导入的用户数据数量({imported_count})！", "red")
+                return
+            
+            self.print_log(f"开始导入数据模式注册 {count} 个账号...", "blue")
+            threading.Thread(target=self._run_import_registration, args=(
+               domain, count, export_path
+            )).start()
 
-    def _run_registration(self,domain ,count,name,birthday,country, gender,export_path):
+    def _run_random_registration(self, domain, count, name, birthday, country, gender, export_path):
         """
-        在单独的线程中运行注册过程
+        在单独的线程中运行随机生成模式的注册过程
         :param domain: 邮箱域名
         :param count: 注册数量
         :param name: 名字
@@ -183,9 +332,25 @@ class Application:
         """
         # 创建注册管理器实例
         register_manager = RegisterManager(log_callback=self.print_log)
-        # 执行注册过程
-        register_manager.register_accounts(
-            domain,count,name,birthday,country,gender,export_path
+        # 执行随机生成注册过程
+        register_manager.register_accounts_random(
+            domain, count, name, birthday, country, gender, export_path
+        )
+    
+    def _run_import_registration(self, domain, count, export_path):
+        """
+        在单独的线程中运行导入数据模式的注册过程
+        :param domain: 邮箱域名
+        :param count: 注册数量
+        :param export_path: 导出文件路径
+        """
+        # 创建注册管理器实例
+        register_manager = RegisterManager(log_callback=self.print_log)
+        # 获取导入的用户数据
+        user_data = self.user_importer.get_user_data()[:count]
+        # 执行导入数据注册过程
+        register_manager.register_accounts_import(
+            domain, user_data, export_path
         )
 
     def run(self):
