@@ -9,3 +9,4 @@ class EmailHandler:
         print("初始化邮件处理成功")
 
     def connect(self):
+        print("链接邮箱中")
