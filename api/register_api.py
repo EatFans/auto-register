@@ -22,7 +22,6 @@ def verify_email_address(email):
     return requests.post(url, headers=headers, data=data)
 
 
-
 def activation_email(email,k_token):
     """
     激活邮箱接口
