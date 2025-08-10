@@ -6,7 +6,6 @@ from account_storage import AccountStorage
 from util.excel_util import *
 import json
 import threading
-import queue
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class RegisterManager:

@@ -1,6 +1,6 @@
 import requests
 
-def mailcow_create_mailbox(api_url, api_key, local_part, domain, password, name="", quota="0",
+def mailcow_create_mailbox(local_part, domain, password, name="", quota="0",
                            force_pw_update="0", tls_enforce_in="1", tls_enforce_out="1", tags=None):
     """
     使用 mailcow API 创建邮箱账号
@@ -21,11 +21,12 @@ def mailcow_create_mailbox(api_url, api_key, local_part, domain, password, name=
     返回:
         dict: API 返回的 JSON 结果
     """
+    API_URL = "http://127.0.0.1/api/v1/add/mailbox"
+    API_KEY = "442317-C79337-D145B7-96DFC8-D2BF50"
     if tags is None:
         tags = []
-
     headers = {
-        "X-API-Key": api_key,
+        "X-API-Key": API_KEY,
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -45,19 +46,20 @@ def mailcow_create_mailbox(api_url, api_key, local_part, domain, password, name=
         "tags": tags
     }
 
-    response = requests.post(api_url, headers=headers, json=payload)
+    response = requests.post(API_URL, headers=headers, json=payload)
     try:
         return response.json()
     except Exception as e:
         return {"error": f"解析响应失败: {str(e)}", "status_code": response.status_code, "text": response.text}
 
+def delet_email():
+    API_URL = "http://127.0.0.1/api/v1/delete/email"
+
+
 if __name__ == "__main__":
-    API_URL = "http://127.0.0.1/api/v1/add/mailbox"
-    API_KEY = "442317-C79337-D145B7-96DFC8-D2BF50"
+
     res = mailcow_create_mailbox(
-        api_url=API_URL,
-        api_key=API_KEY,
-        ålocal_part="TestUser",
+        local_part="TestUser",
         domain="eatfan.top",
         password="12345678",
         name="测试用户",
