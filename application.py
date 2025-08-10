@@ -219,7 +219,7 @@ class Application:
         test_frame = tk.Frame(email_config_frame)
         test_frame.pack(fill='x', padx=10, pady=5)
         test_btn = tk.Button(test_frame, text="测试连接", width=10, 
-                           command=self.test_email_api_connection, bg="#2196F3", fg="white")
+                           command=self.test_email_api_connection, bg="#2196F3", fg="black")
         test_btn.pack(side=tk.LEFT)
         
         # 右列：账号注册情况表格
