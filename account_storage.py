@@ -1,6 +1,6 @@
 # 账号状态存储
 from typing import List
-from account import Account
+from entity.account import Account
 import threading
 
 class AccountStorage:

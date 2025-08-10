@@ -457,9 +457,20 @@ class Application:
         start_index = self.log_text.index(tk.END + "-1c linestart")  # 当前插入行开始
         self.log_text.insert(tk.END, msg + "\n")  # 插入文本
         end_index = self.log_text.index(tk.END + "-1c")  # 插入后行结束位置（不包括新行）
+        
+        # 颜色映射：将不清晰的颜色映射为更清晰的颜色
+        color_mapping = {
+            'yellow': '#FF8C00',  # 深橙色，比黄色更清晰
+            'cyan': '#00CED1',    # 深青色
+            'magenta': '#FF1493'  # 深粉色
+        }
+        
+        # 使用映射后的颜色
+        display_color = color_mapping.get(color, color)
+        
         # 配置颜色 tag
         if color not in self.log_text.tag_names():
-            self.log_text.tag_configure(color, foreground=color)
+            self.log_text.tag_configure(color, foreground=display_color)
         # 应用 tag 到该行
         self.log_text.tag_add(color, start_index, end_index)
         self.log_text.see(tk.END)

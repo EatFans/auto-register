@@ -9,7 +9,7 @@ def mailcow_create_mailbox(local_part, domain, password, name="", quota="0",
         api_url (str): mailcow API 基础地址，例：https://mail.eatfan.top/api/v1/add/mailbox
         api_key (str): mailcow API Key
         local_part (str): 邮箱用户名（不包含@域名）
-        domain (str): 邮箱域名
+        entity (str): 邮箱域名
         password (str): 邮箱密码
         name (str): 邮箱持有者姓名，可空
         quota (str): 配额，单位MB，"0"表示无限
@@ -33,7 +33,7 @@ def mailcow_create_mailbox(local_part, domain, password, name="", quota="0",
 
     payload = {
         "active": "1",
-        "domain": domain,
+        "entity": domain,
         "local_part": local_part,
         "name": name,
         "authsource": "mailcow",

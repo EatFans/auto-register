@@ -1,7 +1,6 @@
 # Excel表格处理工具
 from openpyxl.workbook import Workbook
-import os
-from account import Account
+from entity.account import Account
 from typing import List
 
 def export_accounts_to_excel(accounts: List[Account], filepath: str):

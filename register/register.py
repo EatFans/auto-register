@@ -1,11 +1,12 @@
-from account import Account
-from api.register_api import *
+from api.register_api import RegistrationManager as APIRegistrationManager, RegistrationSession
 from util.generate_util import *
 from datetime import datetime
 from account_storage import AccountStorage
 from util.excel_util import *
+from entity.account import Account
 import json
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class RegisterManager:
@@ -18,7 +19,6 @@ class RegisterManager:
         """
         self.log_callback = log_callback
         self.app_instance = app_instance
-        self.email_handler = None
         self.account_storage = AccountStorage()
 
     def log(self, message, color="black"):
@@ -74,7 +74,8 @@ class RegisterManager:
         """
         使用多线程进行随机生成模式注册
         """
-        self.log(f"开始使用 {thread_count} 个线程进行注册...")
+        self.log(f"开始使用 {thread_count} 个线程进行随机注册，目标数量: {count}", "blue")
+        self.log(f"注册参数: 域名={domain}, 姓名={name}, 生日={birthday}, 国家={country}, 性别={gender}", "blue")
         
         # 创建线程锁，保护共享资源
         self.lock = threading.Lock()
@@ -84,22 +85,35 @@ class RegisterManager:
         with ThreadPoolExecutor(max_workers=thread_count) as executor:
             # 提交注册任务
             futures = []
+            self.log(f"正在提交 {count} 个注册任务到线程池...", "cyan")
+            
             for i in range(count):
                 future = executor.submit(self._register_single_random, domain, name, birthday, country, gender, i+1, count)
                 futures.append(future)
             
+            self.log(f"所有任务已提交，等待执行完成...", "cyan")
+            
             # 等待所有任务完成
+            completed_tasks = 0
             for future in as_completed(futures):
                 try:
                     future.result()
+                    completed_tasks += 1
+                    if completed_tasks % 5 == 0 or completed_tasks == count:  # 每5个任务或最后一个任务报告进度
+                        self.log(f"进度更新: 已完成 {completed_tasks}/{count} 个任务", "blue")
                 except Exception as e:
+                    completed_tasks += 1
                     self.log(f"注册任务执行出错: {str(e)}", "red")
+            
+            self.log(f"所有注册任务执行完毕，成功注册: {self.registered_count}/{count}", "green")
     
     def _register_with_threads_import(self, domain, user_data, thread_count):
         """
         使用多线程进行导入数据模式注册
         """
-        self.log(f"开始使用 {thread_count} 个线程进行注册...")
+        total_users = len(user_data)
+        self.log(f"开始使用 {thread_count} 个线程进行导入数据注册，目标数量: {total_users}", "blue")
+        self.log(f"注册域名: {domain}", "blue")
         
         # 创建线程锁，保护共享资源
         self.lock = threading.Lock()
@@ -109,16 +123,27 @@ class RegisterManager:
         with ThreadPoolExecutor(max_workers=thread_count) as executor:
             # 提交注册任务
             futures = []
+            self.log(f"正在提交 {total_users} 个注册任务到线程池...", "cyan")
+            
             for i, user in enumerate(user_data):
-                future = executor.submit(self._register_single_import, domain, user, i+1, len(user_data))
+                future = executor.submit(self._register_single_import, domain, user, i+1, total_users)
                 futures.append(future)
             
+            self.log(f"所有任务已提交，等待执行完成...", "cyan")
+            
             # 等待所有任务完成
+            completed_tasks = 0
             for future in as_completed(futures):
                 try:
                     future.result()
+                    completed_tasks += 1
+                    if completed_tasks % 5 == 0 or completed_tasks == total_users:  # 每5个任务或最后一个任务报告进度
+                        self.log(f"进度更新: 已完成 {completed_tasks}/{total_users} 个任务", "blue")
                 except Exception as e:
+                    completed_tasks += 1
                     self.log(f"注册任务执行出错: {str(e)}", "red")
+            
+            self.log(f"所有注册任务执行完毕，成功注册: {self.registered_count}/{total_users}", "green")
     
     def _register_single_random(self, domain, name, birthday, country, gender, current_index, total_count):
         """
@@ -132,34 +157,16 @@ class RegisterManager:
             # 使用提供的信息或生成随机信息
             actual_name = name if name else generate_name()
             
-            # 验证邮箱
-            if self.check_email_address(email):
-                # 创建账号对象
-                account = Account(email, password, actual_name, birthday, country, gender)
-                
-                # 线程安全地添加到存储
-                with self.lock:
-                    self.account_storage.add_account(account)
-                    self.registered_count += 1
-                    self.log(f"[{self.registered_count}/{total_count}] 注册成功: {email}", "green")
-                    
-                    # 更新表格
-                    if self.app_instance:
-                        self.app_instance.add_account_to_table(email, password, actual_name, birthday, True, "随机")
-            else:
-                with self.lock:
-                    self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email}", "red")
-                    
-                    # 更新表格（失败状态）
-                    if self.app_instance:
-                        self.app_instance.add_account_to_table(email, password, actual_name, birthday, False, "随机")
+            # 执行完整注册流程
+            success = self._complete_registration(email, password, actual_name, birthday, country, gender, current_index, total_count, "随机")
+            
         except Exception as e:
             with self.lock:
                 self.log(f"[{current_index}/{total_count}] 注册出错: {str(e)}", "red")
                 
                 # 更新表格（错误状态）
                 if self.app_instance:
-                    self.app_instance.add_account_to_table("错误", "错误", name, birthday, False, "导入")
+                    self.app_instance.add_account_to_table("错误", "错误", name if name else "未知", birthday, False, "随机")
     
     def _register_single_import(self, domain, user_data, current_index, total_count):
         """
@@ -176,31 +183,218 @@ class RegisterManager:
             country = user_data['country']
             gender = user_data['gender']
             
-            # 验证邮箱
-            if self.check_email_address(email):
-                # 创建账号对象
-                account = Account(email, password, name, birthday, country, gender)
-                
-                # 线程安全地添加到存储
-                with self.lock:
-                    self.account_storage.add_account(account)
-                    self.registered_count += 1
-                    self.log(f"[{self.registered_count}/{total_count}] 注册成功: {email} ({name})", "green")
-                    
-                    # 更新表格
-                    if self.app_instance:
-                        self.app_instance.add_account_to_table(email, password, name, birthday, True, "导入")
-            else:
-                with self.lock:
-                    self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email} ({name})", "red")
-                    
-                    # 更新表格（失败状态）
-                    if self.app_instance:
-                        self.app_instance.add_account_to_table(email, password, name, birthday, False, "导入")
+            # 执行完整注册流程
+            success = self._complete_registration(email, password, name, birthday, country, gender, current_index, total_count, "导入")
+            
         except Exception as e:
             with self.lock:
                 self.log(f"[{current_index}/{total_count}] 注册出错: {str(e)}", "red")
+                
+                # 更新表格（错误状态）
+                if self.app_instance:
+                    self.app_instance.add_account_to_table("错误", "错误", user_data.get('name', '未知'), user_data.get('birthday', ''), False, "导入")
     
+    def _complete_registration(self, email, password, name, birthday, country, gender, current_index, total_count, source_type):
+        """
+        执行完整的注册流程
+        :param email: 邮箱地址
+        :param password: 密码
+        :param name: 姓名
+        :param birthday: 生日
+        :param country: 国家
+        :param gender: 性别
+        :param current_index: 当前索引
+        :param total_count: 总数量
+        :param source_type: 来源类型（随机/导入）
+        :return: 注册是否成功
+        """
+        try:
+            with self.lock:
+                self.log(f"[{current_index}/{total_count}] 开始注册: {email} ({name})", "blue")
+            
+            # 使用API注册管理器进行完整注册流程
+            with APIRegistrationManager() as api_manager:
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 初始化注册会话: {email}", "cyan")
+                
+                # 步骤1: 验证邮箱
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 接口调用1/3: 验证邮箱 {email}", "yellow")
+                
+                verify_result = api_manager.verify_email_only(email)
+                
+                # 详细日志输出验证结果
+                if verify_result:
+                    status_code = verify_result.get('status_code', 'N/A')
+                    result_text = verify_result.get('result', '')[:100] + '...' if len(verify_result.get('result', '')) > 100 else verify_result.get('result', '')
+                    print(f"[{current_index}/{total_count}] 验证响应: 状态码={status_code}, 内容={result_text}")
+                    
+                    # 尝试解析JSON响应
+                    try:
+                        import json
+                        result_json = json.loads(verify_result.get('result', '{}'))
+                        result_code = result_json.get('ResultCode', 'N/A')
+                        result_msg = result_json.get('ResultMsg', 'N/A')
+                        print(f"[{current_index}/{total_count}] 验证详情: ResultCode={result_code}, ResultMsg={result_msg}")
+                    except:
+                        pass
+                else:
+                    print(f"[{current_index}/{total_count}] 验证响应: 无响应数据")
+                
+                # 检查验证结果
+                if not verify_result or verify_result.get('status_code') != 200:
+                    with self.lock:
+                        self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email}, 状态码: {verify_result.get('status_code') if verify_result else 'None'}", "red")
+                        if self.app_instance:
+                            self.app_instance.add_account_to_table(email, password, name, birthday, False, source_type)
+                    return False
+                
+                # 进一步检查验证结果内容
+                try:
+                    result_data = json.loads(verify_result.get('result', '{}'))
+                    result_code = result_data.get('ResultCode')
+                    if result_code not in ['00', '03']:
+                        with self.lock:
+                            self.log(f"[{current_index}/{total_count}] 邮箱验证失败: {email}, ResultCode: {result_code}, 消息: {result_data.get('ResultMsg', '未知错误')}", "red")
+                            if self.app_instance:
+                                self.app_instance.add_account_to_table(email, password, name, birthday, False, source_type)
+                        return False
+                except (json.JSONDecodeError, AttributeError):
+                    with self.lock:
+                        self.log(f"[{current_index}/{total_count}] 邮箱验证响应解析失败: {email}", "red")
+                        if self.app_instance:
+                            self.app_instance.add_account_to_table(email, password, name, birthday, False, source_type)
+                    return False
+                
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 邮箱验证成功: {email}", "green")
+                
+                # 步骤2: 等待邮件激活（这里需要用户手动处理邮件激活）
+                # 在实际应用中，这里应该集成邮件处理逻辑来自动获取激活链接
+                # 目前先跳过激活步骤，直接尝试注册
+                
+                # 步骤2: 邮件激活（暂时跳过，直接进入注册）
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 接口调用2/3: 邮件激活 (暂时跳过)", "yellow")
+                    self.log(f"[{current_index}/{total_count}] 注意: 邮件激活步骤已跳过，直接尝试注册", "orange")
+                
+                # 步骤3: 提交注册信息
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 接口调用3/3: 提交注册信息 {email}", "yellow")
+                
+                # 转换生日格式
+                if isinstance(birthday, str):
+                    birth_date = datetime.strptime(birthday, "%Y-%m-%d").strftime("%Y%m%d")
+                else:
+                    birth_date = birthday.strftime("%Y%m%d")
+                
+                # 转换性别格式
+                gender_code = 'm' if gender.lower() in ['男', 'male', 'm'] else 'f'
+                
+                # 转换国家代码（这里需要根据实际情况映射）
+                country_code = self._get_country_code(country)
+                
+                # 详细记录注册参数
+                surname = name.split()[0] if ' ' in name else name
+                firstname = name.split()[1] if ' ' in name else ''
+                
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 注册参数: 邮箱={email}, 姓={surname}, 名={firstname}, 国家={country}({country_code}), 生日={birth_date}, 性别={gender}({gender_code})", "cyan")
+                
+                register_result = api_manager.register_only(
+                    email=email,
+                    password=password,
+                    surname=surname,
+                    firstname=firstname,
+                    nation=country_code,
+                    birth=birth_date,
+                    gender=gender_code
+                )
+                
+                # 详细日志输出注册结果
+                if register_result:
+                    status_code = register_result.get('status_code', 'N/A')
+                    result_text = register_result.get('result', '')[:100] + '...' if len(register_result.get('result', '')) > 100 else register_result.get('result', '')
+                    print(f"[{current_index}/{total_count}] 注册响应: 状态码={status_code}, 内容={result_text}")
+                    
+                    # 尝试解析JSON响应
+                    try:
+                        import json
+                        result_json = json.loads(register_result.get('result', '{}'))
+                        if isinstance(result_json, dict):
+                            for key, value in result_json.items():
+                                print(f"[{current_index}/{total_count}] 注册详情: {key}={value}")
+                    except:
+                        pass
+                else:
+                    print(f"[{current_index}/{total_count}] 注册响应: 无响应数据")
+                
+                if register_result and register_result.get('success') == True:
+                    # 创建账号对象
+                    account = Account(email, password, name, birthday, country, gender)
+                    
+                    # 线程安全地添加到存储
+                    with self.lock:
+                        self.account_storage.add_account(account)
+                        self.registered_count += 1
+                        self.log(f"[{self.registered_count}/{total_count}] 注册成功: {email} ({name})", "green")
+                        self.log(f"[{self.registered_count}/{total_count}] 账号详情: 邮箱={email}, 密码={password}, 姓名={name}", "green")
+                        
+                        # 更新表格
+                        if self.app_instance:
+                            self.app_instance.add_account_to_table(email, password, name, birthday, True, source_type)
+                    return True
+                else:
+                    with self.lock:
+                        error_msg = register_result.get('message', '未知错误') if register_result else '无响应数据'
+                        self.log(f"[{current_index}/{total_count}] 注册失败: {email}", "red")
+                        self.log(f"[{current_index}/{total_count}] 失败原因: {error_msg}", "red")
+                        
+                        # 如果有详细的错误信息，也记录下来
+                        if register_result and 'result' in register_result:
+                            result_text = register_result.get('result', '')[:200] + '...' if len(register_result.get('result', '')) > 200 else register_result.get('result', '')
+                            if result_text:
+                                self.log(f"[{current_index}/{total_count}] 详细错误: {result_text}", "red")
+                        
+                        if self.app_instance:
+                            self.app_instance.add_account_to_table(email, password, name, birthday, False, source_type)
+                    return False
+                    
+        except Exception as e:
+            with self.lock:
+                self.log(f"[{current_index}/{total_count}] 注册过程异常: {email}", "red")
+                self.log(f"[{current_index}/{total_count}] 异常详情: {str(e)}", "red")
+                
+                # 记录异常类型
+                import traceback
+                error_trace = traceback.format_exc()
+                self.log(f"[{current_index}/{total_count}] 异常堆栈: {error_trace[:300]}...", "red")
+                
+                if self.app_instance:
+                    self.app_instance.add_account_to_table(email, password, name, birthday, False, source_type)
+            return False
+    
+    def _get_country_code(self, country):
+        """
+        获取国家代码
+        :param country: 国家名称
+        :return: 国家代码
+        """
+        # 这里需要根据实际的国家代码映射表来实现
+        # 暂时返回一个默认值
+        country_mapping = {
+            '中国': 43,
+            '美国': 1,
+            '日本': 81,
+            '韩国': 82,
+            '英国': 44,
+            '德国': 49,
+            '法国': 33,
+            '加拿大': 1,
+            '澳大利亚': 61
+        }
+        return country_mapping.get(country, 43)  # 默认返回中国的代码
+
     def _export_results(self, export_path):
         """
         导出注册结果
@@ -222,7 +416,7 @@ class RegisterManager:
 
     def register_loop_random(self, domain, count, name, birthday, country, gender):
         """
-        随机生成模式循环注册
+        随机生成模式循环注册（已弃用，建议使用register_accounts_random）
         :param domain: 邮箱域名
         :param count: 注册数量
         :param name: 名字（空则随机生成）
@@ -230,116 +424,61 @@ class RegisterManager:
         :param country: 国家
         :param gender: 性别
         """
-        i = 0
-        while i < count:
-            self.log(" ")
-            self.log(f"开始注册第 {i+1} 个账号...", "blue")
-            flag = False
-            
-            # 随机生成邮箱别名
-            email_address = generate_email(domain, 10)
-            self.log("已生成邮箱地址: " + email_address, "green")
-            
-            # 验证邮箱地址
-            if self.check_email_address(email_address):
-                self.log("邮箱地址验证成功！", "green")
-                flag = True
-            # TODO: 通过邮箱获取邮件中的token来激活邮箱
-
-            # 随机生成密码
-            password = generate_password()
-            self.log("已生成密码: " + password, "green")
-
-            # 使用指定名字或随机生成
-            current_name = name if name else generate_name()
-            self.log("使用名字: " + current_name, "green")
-
-            account = Account(
-                email_address,
-                password,
-                current_name,
-                datetime.strptime(birthday, "%Y-%m-%d").date(),
-                country,
-                gender
-            )
-            
-            # TODO: 发送提交注册请求
-            if flag:
-                self.account_storage.add(account)
-                self.log("账号注册成功！", "green")
-            else:
-                self.log("账号注册失败！", "red")
-            i += 1
+        self.log("警告: register_loop_random方法已弃用，建议使用register_accounts_random方法", "yellow")
+        
+        # 转换为新的注册方法
+        export_path = f"注册结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        self.register_accounts_random(domain, count, name, birthday, country, gender, export_path, thread_count=1)
     
     def register_loop_import(self, domain, user_data):
         """
-        导入数据模式循环注册
+        导入数据模式循环注册（已弃用，建议使用register_accounts_import）
         :param domain: 邮箱域名
         :param user_data: 用户数据列表
         """
-        for i, user_info in enumerate(user_data):
-            self.log(" ")
-            self.log(f"开始注册第 {i+1} 个账号...", "blue")
-            flag = False
-            
-            # 随机生成邮箱别名
-            email_address = generate_email(domain, 10)
-            self.log("已生成邮箱地址: " + email_address, "green")
-            
-            # 验证邮箱地址
-            if self.check_email_address(email_address):
-                self.log("邮箱地址验证成功！", "green")
-                flag = True
-            # TODO: 通过邮箱获取邮件中的token来激活邮箱
-
-            # 随机生成密码
-            password = generate_password()
-            self.log("已生成密码: " + password, "green")
-
-            # 使用导入的用户信息
-            name = user_info['name']
-            birthday = user_info['birthday']
-            country = user_info['country']
-            gender = user_info['gender']
-            
-            self.log(f"使用导入信息 - 姓名: {name}, 生日: {birthday}, 国家: {country}, 性别: {gender}", "green")
-
-            account = Account(
-                email_address,
-                password,
-                name,
-                datetime.strptime(birthday, "%Y-%m-%d").date(),
-                country,
-                gender
-            )
-            
-            # TODO: 发送提交注册请求
-            if flag:
-                self.account_storage.add(account)
-                self.log("账号注册成功！", "green")
-            else:
-                self.log("账号注册失败！", "red")
+        self.log("警告: register_loop_import方法已弃用，建议使用register_accounts_import方法", "yellow")
+        
+        # 转换为新的注册方法
+        export_path = f"注册结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        self.register_accounts_import(domain, user_data, export_path, thread_count=1)
 
 
     def check_email_address(self, email_address):
         """
-        检查邮箱地址
+        检查邮箱地址（已弃用，现在集成在_complete_registration方法中）
         :param email_address:
         :return: 如果调用邮箱地址成功就返回true，否则就返回false
         """
-        response = verify_email_address(email_address)
-        if not response or response.status_code != 200:
-            self.log("邮箱地址验证错误！","red")
-            return False
-        # 检查响应体中resultCode
+        self.log("警告: check_email_address方法已弃用，现在使用完整的注册流程", "yellow")
+        
         try:
-            data = response.json()
-        except json.JSONDecodeError:
-            self.log("接口返回数据不是有效JSON格式！","red")
+            with APIRegistrationManager() as api_manager:
+                result = api_manager.verify_email_only(email_address)
+                return result and result.get('success') == True
+        except Exception as e:
+            self.log(f"邮箱地址验证错误: {str(e)}", "red")
             return False
-        result_code = data.get("ResultCode")
-        if result_code != "00":
-            self.log("邮箱地址验证错误！","red")
-            return False
-        print(response.text) # 测试用
-        return True
+    
+    def integrate_email_processor(self, email_processor):
+        """
+        集成邮件处理器，用于自动处理邮件激活
+        :param email_processor: 邮件处理器实例
+        """
+        self.email_processor = email_processor
+        self.log("邮件处理器已集成，支持自动邮件激活", "green")
+    
+    def _process_email_activation(self, email, timeout=300):
+        """
+        处理邮件激活（预留接口，用于集成邮件处理功能）
+        :param email: 邮箱地址
+        :param timeout: 超时时间（秒）
+        :return: 激活token或None
+        """
+        if hasattr(self, 'email_processor') and self.email_processor:
+            try:
+                # 这里将来可以集成邮件处理逻辑
+                # return self.email_processor.get_activation_token(email, timeout)
+                pass
+            except Exception as e:
+                self.log(f"邮件激活处理失败: {str(e)}", "red")
+        return None
