@@ -11,7 +11,6 @@ import json
 import time
 from typing import Dict, Any
 
-# 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.register_api import (
@@ -160,8 +159,7 @@ class InteractiveRegistrationTest:
         print(f"请检查邮箱 {self.test_data['email']} 中的验证邮件")
         print("在验证邮件中找到激活链接，复制其中的 'k' 参数值")
         print("例如: https://ticket.yes24.com/Pages/English/Member/FnMyAuthentication.aspx?k=XXXXXX")
-        print("你需要复制 XXXXXX 部分")
-        
+
         k_token = input("\n请输入邮件中的k参数值: ").strip()
         
         if not k_token:
