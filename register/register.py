@@ -1,4 +1,6 @@
 from api.register_api import RegistrationManager as APIRegistrationManager, RegistrationSession
+from api.email_api import mailcow_create_mailbox
+from api.email_api import is_mailbox_created_successfully
 from util.generate_util import *
 from datetime import datetime
 from account_storage import AccountStorage
@@ -157,6 +159,51 @@ class RegisterManager:
             # 使用提供的信息或生成随机信息
             actual_name = name if name else generate_name()
             
+            # 创建邮箱账号
+            with self.lock:
+                self.log(f"[{current_index}/{total_count}] 正在创建邮箱: {email}", "blue")
+            
+            # 获取邮箱API配置
+            if self.app_instance:
+                api_config = self.app_instance.get_email_api_config()
+                email_domain = api_config.get('email_domain')
+                api_url = api_config.get('api_url')
+                api_key = api_config.get('api_key')
+            else:
+                email_domain = None
+                api_url = None
+                api_key = None
+            
+            # 如果没有配置邮箱域名，跳过邮箱创建
+            if not email_domain:
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 未配置邮箱域名，跳过邮箱创建", "orange")
+            else:
+                # 提取邮箱用户名部分
+                local_part = email.split('@')[0]
+                
+                # 调用邮箱创建API
+                email_result = mailcow_create_mailbox(
+                    local_part=local_part,
+                    domain=email_domain,
+                    password=password,
+                    api_url=api_url,
+                    api_key=api_key,
+                    name=actual_name
+                )
+                
+                # 打印邮箱创建响应
+                print(f"邮箱创建API响应: {email_result}")
+                
+                # 检查邮箱创建是否成功
+                if is_mailbox_created_successfully(email_result):
+                    with self.lock:
+                        self.log(f"[{current_index}/{total_count}] 邮箱创建成功: {local_part}@{email_domain}", "green")
+                else:
+                    with self.lock:
+                        self.log(f"[{current_index}/{total_count}] 邮箱创建失败: 无效的API响应", "red")
+                    return False
+            
             # 执行完整注册流程
             success = self._complete_registration(email, password, actual_name, birthday, country, gender, current_index, total_count, "随机")
             
@@ -182,6 +229,51 @@ class RegisterManager:
             birthday = user_data['birthday']
             country = user_data['country']
             gender = user_data['gender']
+            
+            # 创建邮箱账号
+            with self.lock:
+                self.log(f"[{current_index}/{total_count}] 正在创建邮箱: {email}", "blue")
+            
+            # 获取邮箱API配置
+            if self.app_instance:
+                api_config = self.app_instance.get_email_api_config()
+                email_domain = api_config.get('email_domain')
+                api_url = api_config.get('api_url')
+                api_key = api_config.get('api_key')
+            else:
+                email_domain = None
+                api_url = None
+                api_key = None
+            
+            # 如果没有配置邮箱域名，跳过邮箱创建
+            if not email_domain:
+                with self.lock:
+                    self.log(f"[{current_index}/{total_count}] 未配置邮箱域名，跳过邮箱创建", "orange")
+            else:
+                # 提取邮箱用户名部分
+                local_part = email.split('@')[0]
+                
+                # 调用邮箱创建API
+                email_result = mailcow_create_mailbox(
+                    local_part=local_part,
+                    domain=email_domain,
+                    password=password,
+                    api_url=api_url,
+                    api_key=api_key,
+                    name=name
+                )
+                
+                # 打印邮箱创建响应
+                print(f"邮箱创建API响应: {email_result}")
+                
+                # 检查邮箱创建是否成功
+                if is_mailbox_created_successfully(email_result):
+                    with self.lock:
+                        self.log(f"[{current_index}/{total_count}] 邮箱创建成功: {local_part}@{email_domain}", "green")
+                else:
+                    with self.lock:
+                        self.log(f"[{current_index}/{total_count}] 邮箱创建失败: 无效的API响应", "red")
+                    return False
             
             # 执行完整注册流程
             success = self._complete_registration(email, password, name, birthday, country, gender, current_index, total_count, "导入")
@@ -218,9 +310,7 @@ class RegisterManager:
                     self.log(f"[{current_index}/{total_count}] 初始化注册会话: {email}", "cyan")
                 
                 # 步骤1: 验证邮箱
-                with self.lock:
-                    self.log(f"[{current_index}/{total_count}] 接口调用1/3: 验证邮箱 {email}", "yellow")
-                
+
                 verify_result = api_manager.verify_email_only(email)
                 
                 # 详细日志输出验证结果
@@ -275,13 +365,9 @@ class RegisterManager:
                 
                 # 步骤2: 邮件激活（暂时跳过，直接进入注册）
                 with self.lock:
-                    self.log(f"[{current_index}/{total_count}] 接口调用2/3: 邮件激活 (暂时跳过)", "yellow")
                     self.log(f"[{current_index}/{total_count}] 注意: 邮件激活步骤已跳过，直接尝试注册", "orange")
                 
                 # 步骤3: 提交注册信息
-                with self.lock:
-                    self.log(f"[{current_index}/{total_count}] 接口调用3/3: 提交注册信息 {email}", "yellow")
-                
                 # 转换生日格式
                 if isinstance(birthday, str):
                     birth_date = datetime.strptime(birthday, "%Y-%m-%d").strftime("%Y%m%d")
@@ -482,3 +568,4 @@ class RegisterManager:
             except Exception as e:
                 self.log(f"邮件激活处理失败: {str(e)}", "red")
         return None
+
