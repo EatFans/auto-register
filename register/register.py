@@ -241,8 +241,7 @@ class RegisterManager:
                             with self.lock:
                                 self.log(f"[{current_index}/{total_count}] 读取邮件失败 (重试 {retry + 1}/{max_retries}): {str(e)}", "orange")
                         
-                        if retry < max_retries - 1:
-                            time.sleep(3)  # 等待3秒后重试
+
                     
                     if not k_value:
                         with self.lock:
@@ -456,8 +455,7 @@ class RegisterManager:
                             with self.lock:
                                 self.log(f"[{current_index}/{total_count}] 读取邮件失败 (重试 {retry + 1}/{max_retries}): {str(e)}", "orange")
                         
-                        if retry < max_retries - 1:
-                            time.sleep(3)  # 等待3秒后重试
+
                     
                     if not k_value:
                         with self.lock:
