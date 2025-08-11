@@ -82,10 +82,19 @@ def verify_email_address(email: str, session: Optional[requests.Session] = None)
         'X-Requested-With': 'XMLHttpRequest'
     }
     
+    print(f"[注册API] 验证邮箱请求:")
+    print(f"URL: {url}")
+    print(f"Headers: {headers}")
+    print(f"Data: {data}")
+    
     if session:
-        return session.post(url, headers=headers, data=data)
+        response = session.post(url, headers=headers, data=data)
     else:
-        return requests.post(url, headers=headers, data=data)
+        response = requests.post(url, headers=headers, data=data)
+    
+    print(f"[注册API] 响应状态码: {response.status_code}")
+    print(f"[注册API] 响应内容: {response.text}")
+    return response
 
 
 def activation_email(email: str, k_token: str, session: Optional[requests.Session] = None) -> requests.Response:
@@ -106,10 +115,19 @@ def activation_email(email: str, k_token: str, session: Optional[requests.Sessio
         'Referer': 'https://ticket.yes24.com/Pages/English/Member/FnSignUp.aspx'
     }
     
+    print(f"[注册API] 激活邮箱请求:")
+    print(f"URL: {url}")
+    print(f"Headers: {headers}")
+    print(f"Params: {params}")
+    
     if session:
-        return session.get(url, headers=headers, params=params)
+        response = session.get(url, headers=headers, params=params)
     else:
-        return requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params)
+    
+    print(f"[注册API] 响应状态码: {response.status_code}")
+    print(f"[注册API] 响应内容: {response.text[:500]}...")  # 只打印前500字符，避免输出过长
+    return response
 
 
 def register(email: str, password: str, surname: str, firstname: str, nation: int, birth: str, gender: str, session: Optional[requests.Session] = None) -> requests.Response:
@@ -131,6 +149,7 @@ def register(email: str, password: str, surname: str, firstname: str, nation: in
     data = {
         'Email': email,
         'Password': password,
+        'Password2': password,  # 添加确认密码字段
         'Surname': surname,
         'Firstname': firstname,
         'Nation': str(nation),
@@ -145,7 +164,7 @@ def register(email: str, password: str, surname: str, firstname: str, nation: in
     headers = {
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Accept-Encoding': 'gzip, deflate, br, zstd',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
         'Connection': 'keep-alive',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'Origin': 'https://ticket.yes24.com',
@@ -160,10 +179,19 @@ def register(email: str, password: str, surname: str, firstname: str, nation: in
         'sec-ch-ua-platform': '"macOS"'
     }
 
+    print(f"[注册API] 注册请求:")
+    print(f"URL: {url}")
+    print(f"Headers: {headers}")
+    print(f"Data: {data}")
+    
     if session:
-        return session.post(url, headers=headers, data=data)
+        response = session.post(url, headers=headers, data=data)
     else:
-        return requests.post(url, headers=headers, data=data)
+        response = requests.post(url, headers=headers, data=data)
+    
+    print(f"[注册API] 响应状态码: {response.status_code}")
+    print(f"[注册API] 响应内容: {response.text}")
+    return response
 
 
 def access_registration_form(session: Optional[requests.Session] = None) -> requests.Response:
@@ -179,10 +207,18 @@ def access_registration_form(session: Optional[requests.Session] = None) -> requ
         'Referer': 'https://ticket.yes24.com/Pages/English/Member/FnSignUp.aspx'
     }
     
+    print(f"[注册API] 访问注册表单请求:")
+    print(f"URL: {url}")
+    print(f"Headers: {headers}")
+    
     if session:
-        return session.get(url, headers=headers)
+        response = session.get(url, headers=headers)
     else:
-        return requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers)
+    
+    print(f"[注册API] 响应状态码: {response.status_code}")
+    print(f"[注册API] 响应内容: {response.text[:500]}...")  # 只打印前500字符，避免输出过长
+    return response
 
 
 class RegistrationManager:
@@ -225,7 +261,8 @@ class RegistrationManager:
         """
         session = self.reg_session.get_session()
         response = activation_email(email, k_token, session)
-        if "Authentication success" in response.text:
+        # 检查激活是否成功 - 如果不包含错误信息则表示成功
+        if "The authentication key is not valid" not in response.text and "alert(" not in response.text:
             self.reg_session.email_activated = True
         return {
             'status_code': response.status_code,

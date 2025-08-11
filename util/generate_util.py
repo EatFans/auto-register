@@ -36,18 +36,18 @@ def generate_password(length=12) -> str:
     upper = string.ascii_uppercase
     lower = string.ascii_lowercase
     digits = string.digits
-    symbols = "!@#$%^&*()-_"
+    special = "!@#$%^&*"  # 添加特殊字符
 
     # 确保密码至少包含一种每类字符
     base = [
         random.choice(upper),
         random.choice(lower),
         random.choice(digits),
-        random.choice(symbols)
+        random.choice(special),  # 确保包含特殊字符
     ]
 
     # 补足剩余长度的随机字符串
-    all_chars = upper + lower + digits + symbols
+    all_chars = upper + lower + digits + special
     base += random.choices(all_chars,k=length-len(base))
     # 打乱顺序
     random.shuffle(base)
