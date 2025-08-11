@@ -79,14 +79,7 @@ class Application:
         basic_frame = tk.LabelFrame(left_frame, text="基础配置", font=('Arial', 10, 'bold'))
         basic_frame.pack(fill='x', pady=(0, 10))
         
-        # 邮箱域名
-        domain_frame = tk.Frame(basic_frame)
-        domain_frame.pack(fill='x', padx=10, pady=3)
-        tk.Label(domain_frame, text="邮箱域名：", width=12, anchor='w').pack(side=tk.LEFT)
-        self.domain_entry = tk.Entry(domain_frame, width=30)
-        self.domain_entry.pack(side=tk.LEFT, fill='x', expand=True)
-        self.domain_entry.insert(0, "gmail.com")  # 默认值
-        
+
         # 注册数量
         count_frame = tk.Frame(basic_frame)
         count_frame.pack(fill='x', padx=10, pady=3)
@@ -194,12 +187,40 @@ class Application:
         
         self.log_text.config(state=tk.DISABLED)
         
-        # 右列：邮箱配置（预留）
+        # 右列：邮箱配置
         email_config_frame = tk.LabelFrame(right_frame, text="邮箱配置", font=('Arial', 10, 'bold'))
         email_config_frame.pack(fill='x', pady=(0, 10))
         
-        # 预留空间提示
-        tk.Label(email_config_frame, text="（未完成）", fg="gray").pack(pady=20)
+        # 邮箱域名
+        domain_frame = tk.Frame(email_config_frame)
+        domain_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(domain_frame, text="邮箱域名：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.email_domain_entry = tk.Entry(domain_frame, width=30)
+        self.email_domain_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        self.email_domain_entry.insert(0, "eatfan.top")  # 默认值
+        
+        # 邮箱服务器API URL
+        api_url_frame = tk.Frame(email_config_frame)
+        api_url_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(api_url_frame, text="API URL：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.api_url_entry = tk.Entry(api_url_frame, width=30)
+        self.api_url_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        self.api_url_entry.insert(0, "http://127.0.0.1/api/v1")  # 默认值
+        
+        # API 密钥
+        api_key_frame = tk.Frame(email_config_frame)
+        api_key_frame.pack(fill='x', padx=10, pady=3)
+        tk.Label(api_key_frame, text="API 密钥：", width=12, anchor='w').pack(side=tk.LEFT)
+        self.api_key_entry = tk.Entry(api_key_frame, width=30, show="*")
+        self.api_key_entry.pack(side=tk.LEFT, fill='x', expand=True)
+        self.api_key_entry.insert(0, "442317-C79337-D145B7-96DFC8-D2BF50")  # 默认值
+        
+        # 测试连接按钮
+        test_frame = tk.Frame(email_config_frame)
+        test_frame.pack(fill='x', padx=10, pady=5)
+        test_btn = tk.Button(test_frame, text="测试连接", width=10, 
+                           command=self.test_email_api_connection, bg="#2196F3", fg="black")
+        test_btn.pack(side=tk.LEFT)
         
         # 右列：账号注册情况表格
         table_frame = tk.LabelFrame(right_frame, text="账号注册情况", font=('Arial', 10, 'bold'))
@@ -324,7 +345,7 @@ class Application:
         开始注册
         """
         # 获取基础参数
-        domain = self.domain_entry.get().strip()
+        domain = self.email_domain_entry.get().strip()
         count_str = self.count_entry.get().strip()
         thread_count_str = self.thread_count_entry.get().strip()
         export_path = self.export_path_entry.get().strip()
@@ -457,9 +478,20 @@ class Application:
         start_index = self.log_text.index(tk.END + "-1c linestart")  # 当前插入行开始
         self.log_text.insert(tk.END, msg + "\n")  # 插入文本
         end_index = self.log_text.index(tk.END + "-1c")  # 插入后行结束位置（不包括新行）
+        
+        # 颜色映射：将不清晰的颜色映射为更清晰的颜色
+        color_mapping = {
+            'yellow': '#FF8C00',  # 深橙色，比黄色更清晰
+            'cyan': '#00CED1',    # 深青色
+            'magenta': '#FF1493'  # 深粉色
+        }
+        
+        # 使用映射后的颜色
+        display_color = color_mapping.get(color, color)
+        
         # 配置颜色 tag
         if color not in self.log_text.tag_names():
-            self.log_text.tag_configure(color, foreground=color)
+            self.log_text.tag_configure(color, foreground=display_color)
         # 应用 tag 到该行
         self.log_text.tag_add(color, start_index, end_index)
         self.log_text.see(tk.END)
@@ -497,5 +529,54 @@ class Application:
         """
         for item in self.account_tree.get_children():
             self.account_tree.delete(item)
+        print("账号表格已清空")
+    
+    def test_email_api_connection(self):
+        """
+        测试邮箱API连接
+        """
+        api_url = self.api_url_entry.get().strip()
+        api_key = self.api_key_entry.get().strip()
+        
+        if not api_url or not api_key:
+            messagebox.showwarning("警告", "请填写完整的API URL和API密钥")
+            return
+        
+        try:
+            import requests
+            # 测试API连接（这里可以调用一个简单的API端点来测试）
+            headers = {
+                "X-API-Key": api_key,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+            
+            # 尝试访问API状态端点（如果有的话）
+            test_url = f"{api_url}/status" if not api_url.endswith('/') else f"{api_url}status"
+            response = requests.get(test_url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                messagebox.showinfo("成功", "API连接测试成功！")
+                self.print_log("邮箱API连接测试成功", "green")
+            else:
+                messagebox.showwarning("警告", f"API连接测试失败，状态码: {response.status_code}")
+                self.print_log(f"邮箱API连接测试失败，状态码: {response.status_code}", "orange")
+                
+        except requests.exceptions.RequestException as e:
+            messagebox.showerror("错误", f"API连接测试失败: {str(e)}")
+            self.print_log(f"邮箱API连接测试失败: {str(e)}", "red")
+        except Exception as e:
+            messagebox.showerror("错误", f"测试过程中发生错误: {str(e)}")
+            self.print_log(f"API测试过程中发生错误: {str(e)}", "red")
+    
+    def get_email_api_config(self):
+        """
+        获取邮箱API配置
+        """
+        return {
+            'email_domain': self.email_domain_entry.get().strip(),
+            'api_url': self.api_url_entry.get().strip(),
+            'api_key': self.api_key_entry.get().strip()
+        }
 
 
