@@ -1,6 +1,10 @@
-import requests
+import time
 
-def mailcow_create_mailbox(local_part, domain, password, api_url=None, api_key=None, 
+import requests
+from api.register_api import *
+from util.emai_util import *
+
+def mailcow_create_mailbox(local_part, domain, password, api_url=None, api_key=None,
                            name="", quota="0", force_pw_update="0", tls_enforce_in="1", 
                            tls_enforce_out="1", tags=None):
     """
@@ -53,8 +57,15 @@ def mailcow_create_mailbox(local_part, domain, password, api_url=None, api_key=N
         "tags": tags
     }
 
+    print(f"[Mailcow API] 创建邮箱请求:")
+    print(f"URL: {full_api_url}")
+    print(f"Headers: {headers}")
+    print(f"Payload: {payload}")
+    
     try:
         response = requests.post(full_api_url, headers=headers, json=payload)
+        print(f"[Mailcow API] 响应状态码: {response.status_code}")
+        print(f"[Mailcow API] 响应内容: {response.text}")
         response_data = response.json()
         
         # 添加HTTP状态码到响应中，便于调试
@@ -68,6 +79,7 @@ def mailcow_create_mailbox(local_part, domain, password, api_url=None, api_key=N
         
         return response_data
     except requests.exceptions.RequestException as e:
+        print(f"[Mailcow API] 请求异常: {str(e)}")
         return {"error": f"请求失败: {str(e)}", "status_code": getattr(response, 'status_code', None)}
     except Exception as e:
         return {"error": f"解析响应失败: {str(e)}", "status_code": getattr(response, 'status_code', None), "text": getattr(response, 'text', None)}
@@ -101,10 +113,18 @@ def mailcow_delete_mailbox(email, api_url=None, api_key=None):
 
     payload = [email]  # mailcow API 通常接受邮箱地址列表
 
+    print(f"[Mailcow API] 删除邮箱请求:")
+    print(f"URL: {full_api_url}")
+    print(f"Headers: {headers}")
+    print(f"Payload: {payload}")
+    
     response = requests.post(full_api_url, headers=headers, json=payload)
+    print(f"[Mailcow API] 响应状态码: {response.status_code}")
+    print(f"[Mailcow API] 响应内容: {response.text}")
     try:
         return response.json()
     except Exception as e:
+        print(f"[Mailcow API] 请求异常: {str(e)}")
         return {"error": f"解析响应失败: {str(e)}", "status_code": response.status_code, "text": response.text}
 
 def is_mailbox_created_successfully(api_response):
@@ -118,25 +138,89 @@ def is_mailbox_created_successfully(api_response):
             return False
     return True
 
-if __name__ == "__main__":
-    # 测试创建邮箱
-    res = mailcow_create_mailbox(
-        local_part="TestUser2",
-        domain="eatfan.top",
-        password="12345678",
-        api_url="http://127.0.0.1/api/v1",
-        api_key="442317-C79337-D145B7-96DFC8-D2BF50",
-        name="测试用户",
-        quota="3072",
-        force_pw_update="1",
-        tags=["tag1", "tag2"]
-    )
-    print("创建邮箱结果:", res)
+
+# 临时邮箱API配置
+TEMP_EMAIL_API_KEY = "9bf263b76bf1c46160182dba"
+
+def generate_temp_email(domain="random", quantity=1):
+    """
+    生成临时邮箱地址
     
-    # 测试删除邮箱
-    # delete_res = mailcow_delete_mailbox(
-    #     email="TestUser@eatfan.top",
-    #     api_url="http://127.0.0.1/api/v1",
-    #     api_key="442317-C79337-D145B7-96DFC8-D2BF50"
-    # )
-    # print("删除邮箱结果:", delete_res)
+    参数:
+        domain (str): 指定域名，"random"表示随机域名，也可以指定具体域名
+        quantity (int): 生成数量，默认为1
+    
+    返回:
+        dict: API返回的JSON结果
+        {
+            "mailbox": ["email1@domain.com", "email2@domain.com"],
+            "quantity": 2,
+            "status": 1
+        }
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Referer": "https://www.linshiyouxiang.net/",
+        "Origin": "https://www.linshiyouxiang.net"
+    }
+    url = f"https://www.linshiyouxiang.net/api_v1/email/mailbox?domain={domain}&quantity={quantity}"
+    print(f"[临时邮箱API] 生成临时邮箱请求:")
+    print(f"URL: {url}")
+    print(f"Headers: {headers}")
+    
+    try:
+        response = requests.get(url, headers=headers)
+        print(f"[临时邮箱API] 响应状态码: {response.status_code}")
+        print(f"[临时邮箱API] 响应内容: {response.text}")
+        response_data = response.json()
+        # 只返回mailbox列表
+        if response_data.get("status") == 1 and "mailbox" in response_data:
+            return response_data["mailbox"]
+        else:
+            return []
+    except Exception as e:
+        print(f"获取临时邮箱失败: {str(e)}")
+        return []
+
+def read_email(email):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Referer": "https://www.linshiyouxiang.net/",
+        "Origin": "https://www.linshiyouxiang.net"
+    }
+    read_url = f"https://www.linshiyouxiang.net/api_v1/email/readMessage?api_key={TEMP_EMAIL_API_KEY}&email={email}&sender_email=no-reply@yes24.com&time=PAST_1_HOUR&delete_after_read=false"
+    print(f"[临时邮箱API] 读取邮件请求:")
+    print(f"URL: {read_url}")
+    print(f"Headers: {headers}")
+    
+    try:
+        time.sleep(8)
+        response = requests.get(read_url, headers=headers)
+        print(f"[临时邮箱API] 响应状态码: {response.status_code}")
+        print(f"[临时邮箱API] 响应内容: {response.text}")
+        read_data = response.json()
+        if 'id' in read_data:
+            return read_data["content"]
+    except Exception as e:
+        print(f"读取邮件失败: {str(e)}")
+
+#
+if __name__ == "__main__":
+    emails = generate_temp_email(quantity=1000)
+    print(emails)
+    # result = None
+    # for email in emails:
+    #     print(email) # 打印结果['avj0dhps@deepyinc.com']
+    #
+    #     verify_email_address(email)
+    #
+    #     result = read_email(email)
+    #     print(result)
+    #     k = extract_k_value(result)
+    #     print(k)
+
+    # 通过邮箱
