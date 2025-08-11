@@ -197,15 +197,15 @@ class Application:
         tk.Label(domain_frame, text="邮箱域名：", width=12, anchor='w').pack(side=tk.LEFT)
         self.email_domain_entry = tk.Entry(domain_frame, width=30)
         self.email_domain_entry.pack(side=tk.LEFT, fill='x', expand=True)
-        self.email_domain_entry.insert(0, "eatfan.top")  # 默认值
-        
+        # self.email_domain_entry.insert(0, "eatfan.")  # 默认值
+
         # 邮箱服务器API URL
         api_url_frame = tk.Frame(email_config_frame)
         api_url_frame.pack(fill='x', padx=10, pady=3)
         tk.Label(api_url_frame, text="API URL：", width=12, anchor='w').pack(side=tk.LEFT)
         self.api_url_entry = tk.Entry(api_url_frame, width=30)
         self.api_url_entry.pack(side=tk.LEFT, fill='x', expand=True)
-        self.api_url_entry.insert(0, "http://127.0.0.1/api/v1")  # 默认值
+        # self.api_url_entry.insert(0, "http://127.0.0.1/api/v1")  # 默认值
         
         # API 密钥
         api_key_frame = tk.Frame(email_config_frame)
@@ -213,15 +213,9 @@ class Application:
         tk.Label(api_key_frame, text="API 密钥：", width=12, anchor='w').pack(side=tk.LEFT)
         self.api_key_entry = tk.Entry(api_key_frame, width=30, show="*")
         self.api_key_entry.pack(side=tk.LEFT, fill='x', expand=True)
-        self.api_key_entry.insert(0, "442317-C79337-D145B7-96DFC8-D2BF50")  # 默认值
+        # self.api_key_entry.insert(0, "442317-C79337-D145B7-96DFC8-D2BF50")  # 默认值
         
-        # 测试连接按钮
-        test_frame = tk.Frame(email_config_frame)
-        test_frame.pack(fill='x', padx=10, pady=5)
-        test_btn = tk.Button(test_frame, text="测试连接", width=10, 
-                           command=self.test_email_api_connection, bg="#2196F3", fg="black")
-        test_btn.pack(side=tk.LEFT)
-        
+
         # 右列：账号注册情况表格
         table_frame = tk.LabelFrame(right_frame, text="账号注册情况", font=('Arial', 10, 'bold'))
         table_frame.pack(fill='both', expand=True, pady=(0, 5))
@@ -352,9 +346,6 @@ class Application:
         mode = self.registration_mode.get()
 
         # 基础参数验证
-        if not domain:
-            self.print_log("邮箱域名不能为空！","red")
-            return
         try:
             count = int(count_str)
             if count <= 0:
@@ -531,43 +522,7 @@ class Application:
             self.account_tree.delete(item)
         print("账号表格已清空")
     
-    def test_email_api_connection(self):
-        """
-        测试邮箱API连接
-        """
-        api_url = self.api_url_entry.get().strip()
-        api_key = self.api_key_entry.get().strip()
-        
-        if not api_url or not api_key:
-            messagebox.showwarning("警告", "请填写完整的API URL和API密钥")
-            return
-        
-        try:
-            import requests
-            # 测试API连接（这里可以调用一个简单的API端点来测试）
-            headers = {
-                "X-API-Key": api_key,
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-            
-            # 尝试访问API状态端点（如果有的话）
-            test_url = f"{api_url}/status" if not api_url.endswith('/') else f"{api_url}status"
-            response = requests.get(test_url, headers=headers, timeout=10)
-            
-            if response.status_code == 200:
-                messagebox.showinfo("成功", "API连接测试成功！")
-                self.print_log("邮箱API连接测试成功", "green")
-            else:
-                messagebox.showwarning("警告", f"API连接测试失败，状态码: {response.status_code}")
-                self.print_log(f"邮箱API连接测试失败，状态码: {response.status_code}", "orange")
-                
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror("错误", f"API连接测试失败: {str(e)}")
-            self.print_log(f"邮箱API连接测试失败: {str(e)}", "red")
-        except Exception as e:
-            messagebox.showerror("错误", f"测试过程中发生错误: {str(e)}")
-            self.print_log(f"API测试过程中发生错误: {str(e)}", "red")
+
     
     def get_email_api_config(self):
         """
