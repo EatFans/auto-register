@@ -1,10 +1,25 @@
 # yes24网站自动注册机
 
-本项目为yes24网站批量自动化注册账号的注册机，可随机大批量注册账号，也可以自定义导入用户数据进行大批量注册，
+本项目为网站批量自动化注册账号的注册机，可随机大批量注册账号，也可以自定义导入用户数据进行大批量注册，
+如果需要可以进行再次拓展其他网站注册模块，需要将网站的注册相关的API进行封装，如果需要会话唯一性，根据`api/yes24_register_api.py`
+中进行模仿封装，再通过继承`BaseRegisterManager`来写注册逻辑，最后在`register_factory.py`中的`RegisterManagerFactory`类进行注册。
 
 
 ## 预览
+### 主要UI界面
+![img.png](doc/img.png)
 
+### 随机数据注册模式演示
+![img.png](doc/img2.png)
+
+### 导入数据注册模式演示
+![img.png](doc/img3.png)
+
+### 最终导出的excel账号
+![img.png](doc/img4.png)
+
+### 导入数据excel模版
+![img.png](doc/img5.png)
 
 ## 用户数据导入模版生成
 在本项目中有一个python脚本用于生成用户数据用于导入创建用户数据模版
