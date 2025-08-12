@@ -1,6 +1,6 @@
 import tkinter as tk
 import threading
-from register.register import RegisterManager
+from register.register_factory import RegisterManagerFactory
 import tkinter.filedialog as filedialog
 from util.string_util import *
 from util.import_util import UserDataImporter
@@ -21,6 +21,7 @@ class Application:
         self.height = height
         self.user_importer = UserDataImporter()  # 用户数据导入器
         self.registration_mode = tk.StringVar(value="random")  # 注册模式：random或import
+        self.selected_website = tk.StringVar(value="Yes24")  # 选择的网站
         self.init_window()
         self.setup_ui()
 
@@ -56,11 +57,33 @@ class Application:
         main_frame = tk.Frame(self.window)
         main_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
+        # 创建网站选择区域（顶部）
+        website_frame = tk.LabelFrame(main_frame, text="目标注册网站", font=('Arial', 12, 'bold'))
+        website_frame.pack(fill='x', pady=(0, 10))
+        
+        website_inner = tk.Frame(website_frame)
+        website_inner.pack(fill='x', padx=10, pady=8)
+        
+        tk.Label(website_inner, text="选择网站：", font=('Arial', 10, 'bold')).pack(side=tk.LEFT, padx=(0, 10))
+        
+        # 获取可用网站列表
+        available_websites = RegisterManagerFactory.get_available_websites()
+        self.website_combobox = ttk.Combobox(website_inner, textvariable=self.selected_website, 
+                                           values=available_websites, state="readonly", width=15)
+        self.website_combobox.pack(side=tk.LEFT, padx=(0, 20))
+        
+        # 绑定网站选择变化事件
+        self.website_combobox.bind('<<ComboboxSelected>>', self.on_website_change)
+        
+        # 创建内容区域框架
+        content_frame = tk.Frame(main_frame)
+        content_frame.pack(fill='both', expand=True)
+        
         # 创建左右两列布局
-        left_frame = tk.Frame(main_frame)
+        left_frame = tk.Frame(content_frame)
         left_frame.pack(side=tk.LEFT, fill='both', expand=True, padx=(0, 5))
         
-        right_frame = tk.Frame(main_frame)
+        right_frame = tk.Frame(content_frame)
         right_frame.pack(side=tk.RIGHT, fill='both', expand=True, padx=(5, 0))
         
         # 左列：注册模式选择
@@ -274,6 +297,25 @@ class Application:
             self.import_frame.pack(fill='x', pady=(0, 10))
             self.random_frame.pack_forget()
     
+    def on_website_change(self, event=None):
+        """
+        网站选择变化事件处理
+        """
+        website = self.selected_website.get()
+        
+        # 更新网站描述
+        descriptions = {
+            'Yes24': ' ',
+            # 可以添加更多网站的描述
+            # 'Amazon': '全球最大电商平台',
+            # 'eBay': '全球在线拍卖及购物网站',
+        }
+        
+        desc = descriptions.get(website, '未知网站')
+        self.website_desc_label.config(text=desc)
+        
+        self.print_log(f"已选择目标网站: {website}", "blue")
+    
     def browse_export_path(self):
         """
         弹出文件保存对话框，选择保存的 Excel 文件路径
@@ -339,6 +381,7 @@ class Application:
         开始注册
         """
         # 获取基础参数
+        website = self.selected_website.get()
         domain = self.email_domain_entry.get().strip()
         count_str = self.count_entry.get().strip()
         thread_count_str = self.thread_count_entry.get().strip()
@@ -346,6 +389,10 @@ class Application:
         mode = self.registration_mode.get()
 
         # 基础参数验证
+        if not website:
+            self.print_log("请选择目标网站！", "red")
+            return
+            
         try:
             count = int(count_str)
             if count <= 0:
@@ -389,9 +436,9 @@ class Application:
             if not gender:
                 gender = "男"
             
-            self.print_log(f"开始随机生成模式注册 {count} 个账号，使用 {thread_count} 个线程...", "blue")
+            self.print_log(f"开始{website}随机生成模式注册 {count} 个账号，使用 {thread_count} 个线程...", "blue")
             threading.Thread(target=self._run_random_registration, args=(
-               domain, count, name, birthday, country, gender, export_path, thread_count
+               website, domain, count, name, birthday, country, gender, export_path, thread_count
             )).start()
             
         else:
@@ -405,14 +452,15 @@ class Application:
                 self.print_log(f"注册数量({count})超过导入的用户数据数量({imported_count})！", "red")
                 return
             
-            self.print_log(f"开始导入数据模式注册 {count} 个账号，使用 {thread_count} 个线程...", "blue")
+            self.print_log(f"开始{website}导入数据模式注册 {count} 个账号，使用 {thread_count} 个线程...", "blue")
             threading.Thread(target=self._run_import_registration, args=(
-               domain, count, export_path, thread_count
+               website, domain, count, export_path, thread_count
             )).start()
 
-    def _run_random_registration(self, domain, count, name, birthday, country, gender, export_path, thread_count):
+    def _run_random_registration(self, website, domain, count, name, birthday, country, gender, export_path, thread_count):
         """
         在单独的线程中运行随机生成模式的注册过程
+        :param website: 目标网站
         :param domain: 邮箱域名
         :param count: 注册数量
         :param name: 名字
@@ -422,23 +470,24 @@ class Application:
         :param export_path: 导出文件路径
         :param thread_count: 线程数
         """
-        # 创建注册管理器实例
-        register_manager = RegisterManager(log_callback=self.print_log, app_instance=self)
+        # 使用工厂模式创建对应网站的注册管理器实例
+        register_manager = RegisterManagerFactory.create_manager(website, log_callback=self.print_log, app_instance=self)
         # 执行随机生成注册过程
         register_manager.register_accounts_random(
             domain, count, name, birthday, country, gender, export_path, thread_count
         )
     
-    def _run_import_registration(self, domain, count, export_path, thread_count):
+    def _run_import_registration(self, website, domain, count, export_path, thread_count):
         """
         在单独的线程中运行导入数据模式的注册过程
+        :param website: 目标网站
         :param domain: 邮箱域名
         :param count: 注册数量
         :param export_path: 导出文件路径
         :param thread_count: 线程数
         """
-        # 创建注册管理器实例
-        register_manager = RegisterManager(log_callback=self.print_log, app_instance=self)
+        # 使用工厂模式创建对应网站的注册管理器实例
+        register_manager = RegisterManagerFactory.create_manager(website, log_callback=self.print_log, app_instance=self)
         # 获取导入的用户数据
         user_data = self.user_importer.get_user_data()[:count]
         # 执行导入数据注册过程
