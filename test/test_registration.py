@@ -126,7 +126,7 @@ def test_api_functions():
     print("开始测试API函数基本功能")
     print("=" * 50)
     
-    from api.register_api import RegistrationManager as APIRegistrationManager
+    from api.yes24_register_api import RegistrationManager as APIRegistrationManager
     
     test_email = "test@gmail.com"
     

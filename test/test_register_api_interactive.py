@@ -13,7 +13,7 @@ from typing import Dict, Any
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.register_api import (
+from api.yes24_register_api import (
     RegistrationSession, 
     RegistrationManager,
     verify_email_address,
