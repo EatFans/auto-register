@@ -47,7 +47,7 @@ if __name__ == '__main__':
     ciphertext = "U2FsdGVkX19GGb2TJgDy9kPnI97IWLuijNrz58EK67A="
     print(decrypt_openssl_aes(ciphertext))
 
-    test = "Zijian"
-    test2 = encrypt_openssl_aes(test)
-    print(test2)
-    print(decrypt_openssl_aes(test2))
+    # test = "Zijian"
+    # test2 = encrypt_openssl_aes(test)
+    # print(test2)
+    # print(decrypt_openssl_aes(test2))
