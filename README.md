@@ -2,6 +2,13 @@
 
 本项目为网站批量自动化注册账号的注册机，可随机大批量注册账号，也可以自定义导入用户数据进行大批量注册，
 
+## TODO
+1. 优化BaseRegisterManager类，不同网站注册流程逻辑不同，该类需要设计更通用一点，才能更好去拓展其他网站
+2. 优化yes24网站注册流程
+3. 完成melon注册逻辑（melon注册只能通过导入数据,导入数据时候要使用指定模版，比yes24网站注册的导入模式的模版不通 进行注册，无法使用随机生成进行注册），根据yes24_register.py和test_melon_register_api_interactive.py去完成melon_register.py的逻辑
+4. 测试yes24两种注册逻辑是否受到影响
+5. 测试melon注册
+
 ## 预览
 ### 主要UI界面
 ![img.png](doc/img.png)
@@ -78,3 +85,5 @@ python create_template.py
 ---
 
 **注意**: 请合理使用本工具，遵守相关网站的服务条款和法律法规。
+
+
