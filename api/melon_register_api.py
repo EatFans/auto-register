@@ -23,6 +23,11 @@ def melon_auth_for_join(firstName: str, lastName: str, email: str, password: str
     """
     melon平台注册验证表单请求
     表单信息是通过密钥加密后的
+    :param firstName: 姓
+    :param lastName: 名
+    :param email: 邮箱
+    :param password: 密码
+    :param serverToken: serverToken
     :return:
     """
     url = 'https://gaccounts.melon.com/ticketGlobal/authForJoin'
@@ -80,6 +85,7 @@ def send_email_for_join(email:str):
 def is_already_exist_email(email: str):
     """
     检查邮箱是否已经存在
+    :param email: 邮箱
     :return: 如果存在就返回true，否则就返回false
     """
     url = 'https://gaccounts.melon.com/ticketGlobal/isAlreadyExistEmail'
@@ -103,16 +109,17 @@ def is_already_exist_email(email: str):
     else:
         return False
 
-def valid_auth_key_for_join(email: str,authKey:str, serverToken:str):
+def valid_auth_key_for_join(email: str,code:str):
     """
-    验证邮件验证码
+    验证邮件验证码，获取serverToken
+    :param email: 邮箱
+    :param code: 验证码
     :return:
     """
     url = 'https://gaccounts.melon.com/ticketGlobal/validAuthKeyForJoin'
     data = {
         'email': email,
-        'authKey': authKey,
-        'serverToken': serverToken,
+        'authKey': code,
     }
     headers = {
         'Accept': 'application/json, text/javascript, */*; q=0.01',
@@ -125,42 +132,81 @@ def valid_auth_key_for_join(email: str,authKey:str, serverToken:str):
     response = requests.post(url,headers=headers,data=data)
     print("[验证邮件验证码]: ",response.status_code)
     print("[验证邮件验证码]: ",response.text)
-    return response.json()
+    res = response.json()
+    if res:
+        if res['serverToken']:
+            print("[验证邮件验证码]: 获取到的serverToken ",res['serverToken'])
+            return res['serverToken']
+
+    return None
 
 
-def melon_join_completed():
+def melon_join_completed(firstName: str, lastName: str, email: str, password: str, code: str, serverToken: str):
     """
-    注册完成
+    注册完成表单
+    该表单字段都是通过aes非对称加密过后的
+    :param firstName: 姓
+    :param lastName: 名
+    :param email: 邮箱
+    :param password: 密码
+    :param code: 验证吗
+    :param serverToken: serverToken
     :return:
     """
+    url = 'https://gaccounts.melon.com/ticketGlobal/joinCompleted'
+    data = {
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+        'password': password,
+        'rePassword': password,
+        'cpId': 'MP19',
+        'lang': 'EN',
+        'termsUserAgreement': 'Y',
+        'termsPrivacyPolicy': 'Y',
+        'termsOvsTransPInfo': 'Y',
+        'redirectUrl': 'https://tkglobal.melon.com/main/index.htm?langCd=EN',
+        'authKeyForJoin': code,
+        'serverToken': serverToken
+    }
+    headers = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': 'https://gaccounts.melon.com',
+        'Referer': 'https://gaccounts.melon.com/ticketGlobal/authForJoin',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+    }
+    response = requests.post(url,headers=headers,data=data)
+    print("[完成注册]: ",response.status_code)
+    print("[完成注册]: ",response.text)
+    return response.text
 
-if __name__ == '__main__':
-    # email = '1437657457@qq.com'
-    email = '2180654922@qq.com'
-
-    # 1、提取serverToken
-    serverToken = melon_get_server_token()
-
-    # 2、提交表单
-    melon_auth_for_join("Fan","Zijian",email,'fhdsji43213hg21d',serverToken)
-    # 发送邮箱验证码
-    send_email_for_join(email)
-
-    # 3、 获取邮件验证码
-    # 这里得通过操作邮箱从邮件中获取code
-
-
-
-    # 5、检查邮箱是否存在
-    if is_already_exist_email(email):
-        print("存在")
-    else:
-        print("不存在")
-
-    # 4、提交邮件验证码，验证验证码
-    valid_auth_key_for_join(email,"874321")
-
-
-    # 6、完成注册
-    melon_join_completed()
+# if __name__ == '__main__':
+#     # email = '1437657457@qq.com'
+#     email = '2180654922@qq.com'
+#
+#     # 1、提取serverToken
+#     # serverToken = melon_get_server_token()
+#
+#     # 2、提交表单
+#     # melon_auth_for_join("Fan","Zijian",email,'fhdsji43213hg21d',serverToken)
+#     # 发送邮箱验证码
+#     # send_email_for_join(email)
+#
+#     # 3、 获取邮件验证码
+#     # 这里得通过操作邮箱从邮件中获取code
+#     code:str = input().strip()
+#
+#     # 5、检查邮箱是否存在
+#     if is_already_exist_email(email):
+#         print("存在")
+#     else:
+#         print("不存在")
+#
+#     # 4、提交邮件验证码，验证验证码
+#     serverToken = valid_auth_key_for_join(email,code)
+#
+#
+#     # 6、完成注册
+#     melon_join_completed("Test","User",email,"fds32d13f",code,serverToken)
 
