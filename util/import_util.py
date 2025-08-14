@@ -23,6 +23,10 @@ class UserDataImporter:
             
             # 检查必需的列
             required_columns = ['姓名', '生日', '国家', '性别']
+            # 检查是否有Melon注册需要的额外字段
+            melon_columns = ['邮箱', '邮箱密钥']
+            has_melon_fields = all(col in df.columns for col in melon_columns)
+            
             missing_columns = [col for col in required_columns if col not in df.columns]
             
             if missing_columns:
@@ -39,6 +43,13 @@ class UserDataImporter:
                     birthday = self._parse_birthday(row['生日'])
                     country = str(row['国家']).strip()
                     gender = str(row['性别']).strip()
+                    
+                    # 处理Melon注册需要的额外字段
+                    email = None
+                    email_password = None
+                    if has_melon_fields:
+                        email = str(row['邮箱']).strip() if '邮箱' in row and pd.notna(row['邮箱']) else None
+                        email_password = str(row['邮箱密钥']).strip() if '邮箱密钥' in row and pd.notna(row['邮箱密钥']) else None
                     
                     # 验证数据有效性
                     if not name or name == 'nan':
@@ -60,6 +71,11 @@ class UserDataImporter:
                         'country': country,
                         'gender': gender
                     }
+                    
+                    # 如果有Melon字段，添加到用户信息中
+                    if has_melon_fields:
+                        user_info['email'] = email
+                        user_info['email_password'] = email_password
                     self.user_data.append(user_info)
                     
                 except Exception as e:

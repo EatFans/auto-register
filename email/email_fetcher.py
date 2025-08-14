@@ -430,31 +430,3 @@ class EmailFetcher:
         return []
 
 
-# 使用示例
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    
-    # 示例：QQ邮箱
-    qq_fetcher = EmailFetcher('1437657457@qq.com', 'nxipsohiztzjgfai')
-    
-    if qq_fetcher.connect():
-        # 获取指定发件人的最新邮件
-        emails = qq_fetcher.get_emails_from_sender(
-            sender='noreply_melonticket@kakaoent.com'
-            # 默认只获取最新的1封邮件
-        )
-        
-        for email_info in emails:
-            print(f"邮件主题: {email_info['subject']}")
-            print(f"发件人: {email_info['from']}")
-            print(f"日期: {email_info['date']}")
-            
-            # 提取验证码
-            print(email_info['body'])
-            
-            # 标记为已读
-            qq_fetcher.mark_as_read(email_info['id'])
-            print("-" * 50)
-        
-        qq_fetcher.disconnect()

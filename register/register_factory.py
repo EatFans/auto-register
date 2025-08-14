@@ -2,6 +2,7 @@
 from typing import Dict, Type
 from register.base_register import BaseRegisterManager
 from register.yes24_register import Yes24RegisterManager
+from register.melon_register import MelonRegisterManager
 
 class RegisterManagerFactory:
     """
@@ -12,6 +13,7 @@ class RegisterManagerFactory:
     # 注册的网站管理器映射
     _managers: Dict[str, Type[BaseRegisterManager]] = {
         'Yes24': Yes24RegisterManager,
+        'Melon': MelonRegisterManager,
         # 可以在这里添加更多网站的注册管理器
         # 'Amazon': AmazonRegisterManager,
         # 'eBay': EbayRegisterManager,
