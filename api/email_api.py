@@ -1,7 +1,7 @@
 import time
 
 import requests
-from api.register_api import *
+from api.yes24_register_api import *
 from util.emai_util import *
 
 def mailcow_create_mailbox(local_part, domain, password, api_url=None, api_key=None,
