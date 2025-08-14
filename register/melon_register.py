@@ -6,6 +6,7 @@ import time
 from typing import Dict, Any
 from register.base_register import BaseRegisterManager
 from entity.account import Account
+from util.generate_util import *
 
 # 添加模块路径
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'api'))
@@ -106,7 +107,8 @@ class MelonRegisterManager(BaseRegisterManager):
                 password=password,
                 name=f"{first_name} {last_name}",
                 birthday=user_data.get('birthday', ''),
-                website=self.get_website_name()
+                country=user_data.get('country', ''),
+                gender=user_data.get('gender', '')
             )
             self.add_account_to_storage(account)
             self.update_registered_count()
@@ -159,31 +161,31 @@ class MelonRegisterManager(BaseRegisterManager):
         try:
             # 从用户数据中获取必要信息
             email = user_data.get('email', '')
-            password = user_data.get('password', 'DefaultPass123!')
+            password = generate_password()
             email_password = user_data.get('email_password', '')
             
             if not email:
-                self.log(f"第 {current_index + 1} 行数据缺少邮箱地址，跳过", "red")
+                self.log(f"第 {current_index} 行数据缺少邮箱地址，跳过", "red")
                 return False
             
             if not email_password:
-                self.log(f"第 {current_index + 1} 行数据缺少邮箱密钥，跳过", "red")
+                self.log(f"第 {current_index} 行数据缺少邮箱密钥，跳过", "red")
                 return False
             
-            self.log(f"正在注册第 {current_index + 1}/{total_count} 个账号: {email}", "blue")
+            self.log(f"正在注册第 {current_index}/{total_count} 个账号: {email}", "blue")
             
             # 调用单个账号注册方法，传入邮箱密钥
             success = self._register_single_account(email, password, user_data, email_password=email_password, **kwargs)
             
             if success:
-                self.log(f"第 {current_index + 1}/{total_count} 个账号注册成功", "green")
+                self.log(f"第 {current_index}/{total_count} 个账号注册成功", "green")
             else:
-                self.log(f"第 {current_index + 1}/{total_count} 个账号注册失败", "red")
+                self.log(f"第 {current_index}/{total_count} 个账号注册失败", "red")
             
             return success
             
         except Exception as e:
-            self.log(f"注册第 {current_index + 1} 个账号时发生异常: {str(e)}", "red")
+            self.log(f"注册第 {current_index} 个账号时发生异常: {str(e)}", "red")
             return False
     
     def _initialize_session(self) -> bool:
