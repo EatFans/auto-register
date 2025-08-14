@@ -32,15 +32,19 @@
 
 
 ## 用户数据导入模版生成
-在本项目中有一个python脚本用于生成用户数据用于导入创建用户数据模版
+在本项目中有现成python脚本用于生成用户数据用于导入创建用户数据模版
+
+### 1、生成yes24平台注册数据导入excel表格
 ```shell
-python create_template.py
+python create_yes24_template.py
 ```
 
 运行该命令后，会在根目录下创建`用户数据导入模版.xls`文件
 ```
 用户数据导入模板已创建：/Users/fanzijian/项目/PythonProject/注册机/用户数据导入模板.xlsx
 ```
+
+
 
 
 ## 故障排除

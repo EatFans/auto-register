@@ -75,6 +75,10 @@ class Application:
         # 绑定网站选择变化事件
         self.website_combobox.bind('<<ComboboxSelected>>', self.on_website_change)
         
+        # 网站描述标签
+        self.website_desc_label = tk.Label(website_inner, text="", font=('Arial', 9), fg="gray")
+        self.website_desc_label.pack(side=tk.LEFT, padx=(10, 0))
+        
         # 创建内容区域框架
         content_frame = tk.Frame(main_frame)
         content_frame.pack(fill='both', expand=True)
@@ -305,7 +309,8 @@ class Application:
         
         # 更新网站描述
         descriptions = {
-            'Yes24': ' ',
+            'Yes24': '允许使用随机注册模式和导入数据注册模式',
+            'Melon': '只允许导入数据注册模式，其中使用到的邮箱必须手动开启IMAP/SMTP服务',
             # 可以添加更多网站的描述
             # 'Amazon': '全球最大电商平台',
             # 'eBay': '全球在线拍卖及购物网站',

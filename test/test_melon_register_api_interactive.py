@@ -12,9 +12,13 @@ import time
 from typing import Dict, Any
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'email'))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'util'))
 
 from api.melon_register_api import MelonRegistrationSession
 from util.aes_util import encrypt_openssl_aes, decrypt_openssl_aes
+from email_fetcher import EmailFetcher
+from emai_util import extract_melon_code_value
 
 
 class InteractiveMelonRegistrationTest:
@@ -31,8 +35,13 @@ class InteractiveMelonRegistrationTest:
             'firstName': 'Test',
             'lastName': 'User'
         }
+        self.email_config = {
+            'email': '1437657457@qq.com',
+            'password': 'nxipsohiztzjgfai'  # 邮箱应用专用密码
+        }
         self.server_token = None
         self.verification_code = None
+        self.email_fetcher = None
 
     def print_separator(self, title: str):
         """打印分隔线"""
@@ -72,12 +81,28 @@ class InteractiveMelonRegistrationTest:
             "姓氏", self.test_data['lastName']
         )
 
+        print("\n请输入邮箱配置信息（用于自动获取验证码）:")
+        self.email_config['email'] = self.get_user_input(
+            "邮箱地址", self.email_config['email']
+        )
+        self.email_config['password'] = self.get_user_input(
+            "邮箱应用专用密码", self.email_config['password']
+        )
+
         print("\n测试数据设置完成:")
+        print("注册信息:")
         for key, value in self.test_data.items():
             if key == 'password':
-                print(f"{key}: {'*' * len(value)}")
+                print(f"  {key}: {'*' * len(value)}")
             else:
-                print(f"{key}: {value}")
+                print(f"  {key}: {value}")
+        
+        print("\n邮箱配置:")
+        for key, value in self.email_config.items():
+            if key == 'password':
+                print(f"  {key}: {'*' * len(value)}")
+            else:
+                print(f"  {key}: {value}")
 
     def test_step_1_initialize_session(self):
         """步骤1: 初始化会话并获取serverToken"""
@@ -185,23 +210,77 @@ class InteractiveMelonRegistrationTest:
             print(f"❌ 发送验证邮件失败: {str(e)}")
             return False
 
-    def test_step_5_manual_verification_code(self):
-        """步骤5: 手动输入验证码"""
-        self.print_step_info(5, "输入验证码", "从邮箱中获取验证码并验证")
-
-        print(f"📧 请检查邮箱 {self.test_data['email']} 中的验证邮件")
-        print("   在邮件中找到验证码（通常是6位数字）")
-
-        # 获取验证码
-        self.verification_code = input("\n请输入验证码: ").strip()
-
-        if not self.verification_code:
-            print("❌ 验证码不能为空")
-            return False
+    def test_step_5_auto_verification_code(self):
+        """步骤5: 自动获取验证码"""
+        self.print_step_info(5, "自动获取验证码", "从邮箱中自动获取验证码并验证")
 
         try:
-            # 验证验证码并获取新的serverToken
-            print(f"\n🔍 正在验证验证码: {self.verification_code}")
+            # 初始化邮件抓取器
+            print(f"📧 正在连接邮箱 {self.email_config['email']}...")
+            self.email_fetcher = EmailFetcher(
+                self.email_config['email'], 
+                self.email_config['password']
+            )
+            
+            if not self.email_fetcher.connect():
+                print("❌ 邮箱连接失败")
+                return self._fallback_to_manual_input()
+            
+            print("✅ 邮箱连接成功")
+            
+            # 等待邮件到达（最多等待60秒）
+            print("⏳ 等待验证邮件到达...")
+            max_attempts = 12  # 12次，每次等待5秒
+            
+            for attempt in range(max_attempts):
+                print(f"   尝试 {attempt + 1}/{max_attempts}...")
+                
+                # 获取来自Melon的邮件
+                emails = self.email_fetcher.get_emails_from_sender(
+                    sender='noreply_melonticket@kakaoent.com',
+                    unseen_only=True,
+                    limit=1
+                )
+                
+                if emails:
+                    email_info = emails[0]
+                    print(f"✅ 找到验证邮件: {email_info['subject']}")
+                    
+                    # 提取验证码
+                    html_body = email_info.get('html_body', '') or email_info.get('body', '')
+                    verification_code = extract_melon_code_value(html_body)
+                    
+                    if verification_code:
+                        self.verification_code = verification_code
+                        print(f"✅ 成功提取验证码: {verification_code}")
+                        
+                        # 标记邮件为已读
+                        self.email_fetcher.mark_as_read(email_info['id'])
+                        
+                        # 验证验证码
+                        return self._verify_code()
+                    else:
+                        print("⚠️  邮件中未找到验证码，继续等待...")
+                
+                if attempt < max_attempts - 1:
+                    time.sleep(5)  # 等待5秒后重试
+            
+            print("❌ 等待超时，未收到验证邮件")
+            return self._fallback_to_manual_input()
+            
+        except Exception as e:
+            print(f"❌ 自动获取验证码失败: {str(e)}")
+            return self._fallback_to_manual_input()
+        
+        finally:
+            # 断开邮箱连接
+            if self.email_fetcher:
+                self.email_fetcher.disconnect()
+    
+    def _verify_code(self):
+        """验证验证码"""
+        try:
+            print(f"🔍 正在验证验证码: {self.verification_code}")
             new_server_token = self.session.valid_auth_key_for_join(
                 self.test_data['email'],
                 self.verification_code
@@ -214,12 +293,26 @@ class InteractiveMelonRegistrationTest:
                 return True
             else:
                 print("❌ 验证码验证失败")
-                print("   请检查验证码是否正确或是否已过期")
                 return False
 
         except Exception as e:
             print(f"❌ 验证验证码失败: {str(e)}")
             return False
+    
+    def _fallback_to_manual_input(self):
+        """回退到手动输入验证码"""
+        print("\n⚠️  自动获取失败，回退到手动输入模式")
+        print(f"📧 请检查邮箱 {self.test_data['email']} 中的验证邮件")
+        print("   在邮件中找到验证码（通常是6位数字）")
+
+        # 获取验证码
+        self.verification_code = input("\n请输入验证码: ").strip()
+
+        if not self.verification_code:
+            print("❌ 验证码不能为空")
+            return False
+        
+        return self._verify_code()
 
     def test_step_6_complete_registration(self):
         """步骤6: 完成注册（需要AES加密）"""
@@ -284,8 +377,8 @@ class InteractiveMelonRegistrationTest:
             if not self.test_step_4_send_verification_email():
                 return False
 
-            # 步骤5: 手动验证码输入
-            if not self.test_step_5_manual_verification_code():
+            # 步骤5: 自动获取验证码
+            if not self.test_step_5_auto_verification_code():
                 return False
 
             # 等待用户确认
