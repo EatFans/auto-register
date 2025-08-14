@@ -1,4 +1,4 @@
-from api.yes24_register_api import RegistrationManager as APIRegistrationManager, RegistrationSession, RegistrationManager, verify_email_address, activation_email, register, access_registration_form
+from api.register_api import RegistrationManager as APIRegistrationManager, RegistrationSession, RegistrationManager, verify_email_address, activation_email, register, access_registration_form
 from api.email_api import mailcow_create_mailbox, generate_temp_email, read_email
 from util.generate_util import *
 from datetime import datetime
@@ -241,7 +241,8 @@ class RegisterManager:
                             with self.lock:
                                 self.log(f"[{current_index}/{total_count}] 读取邮件失败 (重试 {retry + 1}/{max_retries}): {str(e)}", "orange")
                         
-
+                        if retry < max_retries - 1:
+                            time.sleep(3)  # 等待3秒后重试
                     
                     if not k_value:
                         with self.lock:
@@ -455,7 +456,8 @@ class RegisterManager:
                             with self.lock:
                                 self.log(f"[{current_index}/{total_count}] 读取邮件失败 (重试 {retry + 1}/{max_retries}): {str(e)}", "orange")
                         
-
+                        if retry < max_retries - 1:
+                            time.sleep(3)  # 等待3秒后重试
                     
                     if not k_value:
                         with self.lock:

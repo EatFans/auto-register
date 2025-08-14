@@ -1,6 +1,6 @@
 # Yes24网站注册管理器
 from register.base_register import BaseRegisterManager
-from api.yes24_register_api import RegistrationManager as APIRegistrationManager, verify_email_address, activation_email, register
+from api.register_api import RegistrationManager as APIRegistrationManager, verify_email_address, activation_email, register
 from api.email_api import mailcow_create_mailbox, generate_temp_email, read_email
 from util.generate_util import *
 from entity.account import Account

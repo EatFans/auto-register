@@ -12,7 +12,9 @@ class RegisterManagerFactory:
     # 注册的网站管理器映射
     _managers: Dict[str, Type[BaseRegisterManager]] = {
         'Yes24': Yes24RegisterManager,
-        # TODO: 添加更多网站的注册管理器
+        # 可以在这里添加更多网站的注册管理器
+        # 'Amazon': AmazonRegisterManager,
+        # 'eBay': EbayRegisterManager,
     }
     
     @classmethod

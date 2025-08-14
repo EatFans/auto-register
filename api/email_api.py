@@ -1,7 +1,7 @@
 import time
 
 import requests
-from api.yes24_register_api import *
+from api.register_api import *
 from util.emai_util import *
 
 def mailcow_create_mailbox(local_part, domain, password, api_url=None, api_key=None,
@@ -208,8 +208,7 @@ def read_email(email):
     except Exception as e:
         print(f"读取邮件失败: {str(e)}")
 
-
-
+#
 if __name__ == "__main__":
     emails = generate_temp_email(quantity=1000)
     print(emails)
