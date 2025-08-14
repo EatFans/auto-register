@@ -25,20 +25,13 @@ def create_melon_template():
     
     # 获取当前脚本所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    template_path = os.path.join(current_dir, 'melon_template.xlsx')
+    template_path = os.path.join(current_dir, 'Melon平台注册数据导入模板.xlsx')
     
     # 保存Excel文件
     df.to_excel(template_path, index=False)
     
     print(f'✅ Melon注册模板文件已创建: {template_path}')
-    print('\n模板文件包含以下字段:')
-    print('- 姓名: 用户真实姓名')
-    print('- 生日: 格式为 YYYY-MM-DD')
-    print('- 国家: 用户所在国家')
-    print('- 性别: 男/女')
-    print('- 邮箱: 用于注册的邮箱地址')
-    print('- 邮箱密钥: 邮箱的登录密码，用于获取验证码')
-    print('\n请根据实际情况修改模板中的示例数据。')
+
     
     return template_path
 

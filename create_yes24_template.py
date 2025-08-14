@@ -72,7 +72,7 @@ def create_user_data_template():
     ws_info.column_dimensions['A'].width = 50
     
     # 保存文件
-    template_path = os.path.join(os.path.dirname(__file__), '用户数据导入模板.xlsx')
+    template_path = os.path.join(os.path.dirname(__file__), 'Yes24平台注册数据导入模板.xlsx')
     wb.save(template_path)
     print(f"用户数据导入模板已创建：{template_path}")
     return template_path
