@@ -334,58 +334,7 @@ class EmailFetcher:
             self.logger.error(f"提取文本正文时出错: {str(e)}")
         
         return ''
-    
-    def extract_verification_code(self, email_content: str, patterns: Optional[List[str]] = None) -> Optional[str]:
-        """从邮件内容中提取验证码
-        
-        Args:
-            email_content: 邮件内容（HTML或文本）
-            patterns: 自定义正则表达式模式列表
-            
-        Returns:
-            提取到的验证码，如果没有找到则返回None
-        """
-        if not email_content:
-            return None
-        
-        # 如果是HTML内容，先提取纯文本
-        if '<html' in email_content.lower() or '<body' in email_content.lower():
-            try:
-                soup = BeautifulSoup(email_content, 'html.parser')
-                text_content = soup.get_text()
-            except Exception:
-                text_content = email_content
-        else:
-            text_content = email_content
-        
-        # 默认验证码匹配模式
-        default_patterns = [
-            r'验证码[：:]*\s*([A-Za-z0-9]{4,8})',  # 中文验证码
-            r'verification code[：:]*\s*([A-Za-z0-9]{4,8})',  # 英文验证码
-            r'code[：:]*\s*([A-Za-z0-9]{4,8})',  # 简单code
-            r'([A-Za-z0-9]{6})',  # 6位数字字母组合
-            r'([0-9]{4,8})',  # 4-8位纯数字
-            r'\b([A-Z0-9]{4,8})\b',  # 4-8位大写字母数字组合
-        ]
-        
-        # 使用自定义模式或默认模式
-        search_patterns = patterns or default_patterns
-        
-        for pattern in search_patterns:
-            try:
-                matches = re.findall(pattern, text_content, re.IGNORECASE)
-                if matches:
-                    # 返回第一个匹配的验证码
-                    code = matches[0] if isinstance(matches[0], str) else matches[0][0]
-                    self.logger.info(f"找到验证码: {code}")
-                    return code
-            except Exception as e:
-                self.logger.error(f"正则匹配时出错: {str(e)}")
-                continue
-        
-        self.logger.warning("未找到验证码")
-        return None
-    
+
     def get_emails_from_sender(self, sender: str, subject_keywords: Optional[List[str]] = None, 
                               unseen_only: bool = False, limit: int = 1) -> List[Dict]:
         """获取指定发件人的邮件
@@ -492,7 +441,7 @@ if __name__ == "__main__":
     if qq_fetcher.connect():
         # 获取指定发件人的最新邮件
         emails = qq_fetcher.get_emails_from_sender(
-            sender='eatfan0921@163.com'
+            sender='noreply_melonticket@kakaoent.com'
             # 默认只获取最新的1封邮件
         )
         
@@ -502,9 +451,7 @@ if __name__ == "__main__":
             print(f"日期: {email_info['date']}")
             
             # 提取验证码
-            code = qq_fetcher.extract_verification_code(email_info['body'])
-            if code:
-                print(f"验证码: {code}")
+            print(email_info['body'])
             
             # 标记为已读
             qq_fetcher.mark_as_read(email_info['id'])

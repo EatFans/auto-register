@@ -20,3 +20,10 @@ def extract_k_value(html_content):
         return match.group(1)
 
     return None
+
+def extract_melon_code_value(html_content):
+    """
+    解析获取melon邮件code验证码
+    :param html_content:
+    :return:
+    """
