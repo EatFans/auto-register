@@ -22,6 +22,7 @@ class Application:
         self.user_importer = UserDataImporter()  # 用户数据导入器
         self.registration_mode = tk.StringVar(value="random")  # 注册模式：random或import
         self.selected_website = tk.StringVar(value="Yes24")  # 选择的网站
+
         self.init_window()
         self.setup_ui()
 
@@ -343,6 +344,7 @@ class Application:
             title="选择要导入的Excel文件"
         )
         if file_path:
+    
             self.import_file_entry.delete(0, 'end')
             self.import_file_entry.insert(0, file_path)
             # 尝试导入数据

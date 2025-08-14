@@ -69,7 +69,8 @@ class UserDataImporter:
                         'name': name,
                         'birthday': birthday,
                         'country': country,
-                        'gender': gender
+                        'gender': gender,
+                        'row_index': index + 2  # Excel行索引（从第2行开始，第1行是标题）
                     }
                     
                     # 如果有Melon字段，添加到用户信息中

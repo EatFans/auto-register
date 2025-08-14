@@ -419,3 +419,4 @@ class MelonRegisterManager(BaseRegisterManager):
         except Exception as e:
             self.log(f"完成注册失败: {str(e)}", "red")
             return False
+    

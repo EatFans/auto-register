@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Optional
 from account_storage import AccountStorage
 from entity.account import Account
-from util.excel_util import export_accounts_to_excel
+from util.excel_util import export_accounts_to_excel, export_all_registration_data_to_excel
+
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -25,6 +26,8 @@ class BaseRegisterManager(ABC):
         self.account_storage = AccountStorage()
         self.lock = threading.Lock()
         self.registered_count = 0
+        self.failed_registrations = []  # 存储注册失败的数据
+        self.import_user_data = []  # 存储导入的原始用户数据
     
     def log(self, message, color="black"):
         """
@@ -112,8 +115,12 @@ class BaseRegisterManager(ABC):
         :param thread_count: 线程数
         :param kwargs: 其他参数
         """
-        # 清空之前的账号存储
+        # 清空之前的账号存储和失败记录
         self.account_storage.clear()
+        self.failed_registrations.clear()
+        
+        # 保存导入的原始用户数据
+        self.import_user_data = user_data.copy()
         
         # 验证配置
         if not self.validate_config(domain=domain, **kwargs):
@@ -123,7 +130,7 @@ class BaseRegisterManager(ABC):
         # 多线程注册
         self._register_with_threads_import(domain, user_data, thread_count, **kwargs)
         
-        # 导出结果
+        # 导出结果（包括失败数据）
         self._export_results(export_path)
     
     def _register_with_threads_random(self, domain, count, name, birthday, country, gender, thread_count, **kwargs):
@@ -178,6 +185,7 @@ class BaseRegisterManager(ABC):
             self.log(f"正在提交 {count} 个注册任务到线程池...", "cyan")
             
             for i, data in enumerate(user_data):
+                row_index = data.get('row_index', i + 2)  # 使用数据中的行索引，如果没有则使用默认值
                 future = executor.submit(self._register_single_import_wrapper, domain, data, i+1, count, **kwargs)
                 futures.append(future)
             
@@ -207,8 +215,22 @@ class BaseRegisterManager(ABC):
         """
         导入注册单个账号的包装方法
         """
-        # 子类需要实现具体的注册逻辑
-        return self._register_single_import(domain, user_data, current_index, total_count, **kwargs)
+        try:
+            # 调用子类实现的具体注册逻辑
+            result = self._register_single_import(domain, user_data, current_index, total_count, **kwargs)
+            
+            # 只有在注册失败时才记录失败数据
+            if not result:
+                self.add_failed_registration(user_data, "注册失败")
+            
+            return result
+        except Exception as e:
+            # 异常处理，记录失败数据
+            error_message = str(e)
+            self.add_failed_registration(user_data, error_message)
+            
+            self.log(f"注册异常: {user_data.get('姓名', 'Unknown')} - {error_message}", "red")
+            return False
     
     @abstractmethod
     def _register_single_random(self, domain, name, birthday, country, gender, current_index, total_count, **kwargs):
@@ -222,7 +244,11 @@ class BaseRegisterManager(ABC):
     def _register_single_import(self, domain, user_data, current_index, total_count, **kwargs):
         """
         导入注册单个账号的具体实现
-        子类必须实现此方法
+        :param domain: 邮箱域名
+        :param user_data: 用户数据
+        :param current_index: 当前索引
+        :param total_count: 总数量
+        :param kwargs: 其他参数
         """
         pass
     
@@ -235,19 +261,21 @@ class BaseRegisterManager(ABC):
             self.log("未指定导出路径，跳过导出", "yellow")
             return
         
+        # 获取成功注册的账号和失败的注册数据
         accounts = self.account_storage.get_all()
-        if not accounts:
-            self.log("没有账号数据可导出", "yellow")
-            return
+        failed_data = self.failed_registrations
         
+        # 使用新的合并导出函数
         try:
-            success = export_accounts_to_excel(accounts, export_path)
+            success = export_all_registration_data_to_excel(accounts, failed_data, export_path)
             if success:
-                self.log(f"账号数据已成功导出到: {export_path}", "green")
+                success_count = len(accounts)
+                failed_count = len(failed_data)
+                self.log(f"注册结果已导出到: {export_path} (成功: {success_count}, 失败: {failed_count})", "green")
             else:
-                self.log(f"导出失败: {export_path}", "red")
+                self.log(f"导出注册结果失败: {export_path}", "red")
         except Exception as e:
-            self.log(f"导出异常: {str(e)}", "red")
+            self.log(f"导出注册结果异常: {str(e)}", "red")
     
     def add_account_to_storage(self, account: Account):
         """
@@ -255,17 +283,37 @@ class BaseRegisterManager(ABC):
         :param account: 账号对象
         """
         self.account_storage.add(account)
-        
-        # 更新UI表格
-        if self.app_instance:
-            self.app_instance.add_account_to_table(
-                account.email, 
-                account.password, 
-                account.name, 
-                account.birthday, 
-                "已完成", 
-                self.get_website_name()
-            )
+    
+    def add_failed_registration(self, user_data, error_message):
+        """
+        添加失败的注册数据
+        :param user_data: 原始用户数据
+        :param error_message: 错误信息
+        """
+        with self.lock:
+            failed_data = user_data.copy()
+            
+            # 将英文键名转换为中文键名，以便在导出时正确显示
+            key_mapping = {
+                'name': '名字',
+                'birthday': '生日', 
+                'country': '国家区域',
+                'gender': '性别',
+                'email': '邮箱',
+                'email_password': '邮箱密钥'
+            }
+            
+            # 创建新的失败数据字典，使用中文键名
+            converted_failed_data = {}
+            for eng_key, value in failed_data.items():
+                if eng_key in key_mapping:
+                    converted_failed_data[key_mapping[eng_key]] = value
+                else:
+                    converted_failed_data[eng_key] = value
+            
+            converted_failed_data['失败原因'] = error_message
+            self.failed_registrations.append(converted_failed_data)
+    
     
     def update_registered_count(self):
         """
