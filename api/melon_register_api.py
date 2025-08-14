@@ -228,7 +228,7 @@ class MelonRegistrationSession:
         return response.text
 
 
-# 为了向后兼容，保留原有的独立函数
+# 为了向后兼         容，保留原有的独立函数
 def melon_get_server_token():
     """
     请求获取join页面，然后从join页面中获取解析到serverToken
